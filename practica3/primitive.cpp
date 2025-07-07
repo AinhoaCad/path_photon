@@ -4,8 +4,6 @@
 #include "../practica2/Image.h"
 #include <cmath>
 
-using namespace std;
-
 // Constructor de Sphere
 Sphere::Sphere(Point c, float r, Pixel col, bool e) : centro(c), radio(r), color(col), emision(e) {}
 

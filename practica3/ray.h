@@ -1,7 +1,6 @@
 #include <iostream>
 #include "../practica1/point.h"
 #include "../practica1/operations.h"
-using namespace std;
 
 class Ray{
     public:
