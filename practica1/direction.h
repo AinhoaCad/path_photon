@@ -1,5 +1,4 @@
-#ifndef DIRECTION_H
-#define DIRECTION_H
+#pragma once
 
 #include <iostream>
 #include "matrix.h"
@@ -28,10 +27,8 @@ public:
     }
     
     // Sobrecarga del operador << para imprimir el objeto Direction
-    friend ostream& operator<<(ostream& os, const Direction& d) {
+    friend std::ostream& operator<<(std::ostream& os, const Direction& d) {
         os << "[" << d.getX() << ", " << d.getY() << ", " << d.getZ() << "]";
         return os;
     }
 };
-
-#endif // DIRECTION_H
