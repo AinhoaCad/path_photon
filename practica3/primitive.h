@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include "../practica1/point.h"
 #include "../practica1/operations.h"
