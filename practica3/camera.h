@@ -24,7 +24,8 @@ public:
     Camera(Point origen, Direction l, Direction u, Direction f, int anchp, int altp);
 
     // Método para generar un rayo hacia el centro de un píxel dado (i, j)
-    Ray generateRay(int i, int j);
+    Ray generateRay(int i, int j, std::string n);
 
     Image generateImage(Primitive* primitives[], int numPrimitives);
+    Image generateImageMultipleRays(Primitive* primitives[], int numPrimitives, int numRays);
 };

@@ -62,8 +62,8 @@ int main() {
 
     Image img = camara.generateImage(primitivas, n_primitivas);
     img.writePPM("imagen.ppm");
-    Image img64 = camara.generateImage(primitivas, n_primitivas);
-    img64.writePPM("imagen.ppm");
+    Image img64 = camara.generateImageMultipleRays(primitivas, n_primitivas, 64);
+    img64.writePPM("imagen64.ppm");
     std::cout << "Imagen generada" << std::endl;
     return 0;
 }
