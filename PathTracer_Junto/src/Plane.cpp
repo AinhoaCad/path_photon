@@ -1,0 +1,65 @@
+#include "Plane.hpp"
+#include <cmath>
+
+
+// Constructor
+Plane::Plane(const Vector3& normal, float d, const Material& material, bool emision)
+    : normal_(normal.normalized()), d_(d), material_(material), emision_(emision) {}
+
+// Intersección rayo-plano
+bool Plane::intersect(const Ray& ray, float& t) const {
+    float denom = normal_.dotProduct(ray.direction());
+    if (std::fabs(denom) < 1e-6) return false;
+
+    float num = normal_.dotProduct(ray.origin()) + d_;
+    t = -num / denom;
+    return t > 0;
+}
+
+// Getters modernos
+Vector3 Plane::normal() const {
+    return normal_;
+}
+
+float Plane::d() const {
+    return d_;
+}
+
+Material Plane::getMaterial() const {
+    return material_;
+}
+
+Vector3 Plane::getIntersectionPoint(const Ray& ray, float t) const {
+    return ray.origin() + ray.direction() * t;
+}
+
+Vector3 Plane::getNormal(const Ray& ray, float t) const {
+    return normal_;
+}
+
+// Métodos compatibles (heredados)
+Direction Plane::getPointNormal(Point p) const {
+    return normal_;
+}
+
+Pixel Plane::getColor() const {
+    return material_.color;
+}
+
+bool Plane::getEmision() const {
+    return emision_;
+}
+
+// Setters de compatibilidad
+void Plane::setDistancia(float d) {
+    d_ = d;
+}
+
+void Plane::setNormal(const Vector3& n) {
+    normal_ = n.normalized();
+}
+
+void Plane::setColor(const Pixel& col) {
+    material_.color = col;
+}
+
