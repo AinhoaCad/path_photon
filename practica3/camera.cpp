@@ -1,6 +1,8 @@
 #include <vector>
 #include "../practica1/operations.h"
 #include "camera.h"
+#include <ctime> // Para usar srand
+#include <cstdlib> // Para generar números aleatorios
 
 Camera::Camera(Point origen, Direction l, Direction u, Direction f, int anchp, int altp)
     : origen(origen), left(l), up(u), forward(f), pixelWidth(anchp), pixelHeight(altp) {
