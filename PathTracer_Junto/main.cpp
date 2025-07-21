@@ -1,5 +1,7 @@
 #include <iostream>
 #include "Scene.hpp"
+#include "Camara.hpp"
+#include "Primitive.hpp"
 
 Scene createCornellBox() {
     Scene scene;
@@ -10,18 +12,18 @@ Scene createCornellBox() {
     Material whiteDiffuse(Color(0.8f, 0.8f, 0.8f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), 1.0f);
 
     // Paredes como planos
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));   // Izquierda
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), -1.0f, greenDiffuse)); // Derecha
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, whiteDiffuse)); // Piso
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), -1.0f, whiteDiffuse)); // Techo
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, 1.0f), 3.0f, whiteDiffuse));  // Fondo
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));   // Izquierda
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), -1.0f, greenDiffuse, false)); // Derecha
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, whiteDiffuse, false)); // Piso
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), -1.0f, whiteDiffuse, false)); // Techo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, 1.0f), 3.0f, whiteDiffuse, false));  // Fondo
 
     // Esferas
-    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, whiteDiffuse));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, whiteDiffuse));
+    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, whiteDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, whiteDiffuse, false));
     
     // Luz puntual
-    scene.addLight(PointLight(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f)));
+    scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
 
     std::cout << "Escena creada." << std::endl;
 

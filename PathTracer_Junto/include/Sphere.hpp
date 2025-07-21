@@ -26,7 +26,7 @@ public:
     // Setters (compatibilidad)
     void setCentro(const Vector3& c);
     void setRadio(float r);
-    void setColor(const Pixel& col);
+    void setMaterial(const Material& material);
 
 protected:
     Vector3 center_;

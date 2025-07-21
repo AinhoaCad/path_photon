@@ -4,6 +4,16 @@
 Vector3::Vector3() : x(0), y(0), z(0) {}
 Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
 
+// Conversión a Point y Direction
+
+Point Vector3::toPoint() const {
+    return Point(x, y, z);
+}
+
+Direction Vector3::toDirection() const {
+    return Direction(x, y, z);
+}
+
 // Operadores básicos
 Vector3 Vector3::operator+(const Vector3& other) const {
     return Vector3(x + other.x, y + other.y, z + other.z);

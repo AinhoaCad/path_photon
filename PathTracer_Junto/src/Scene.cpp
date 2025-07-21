@@ -8,7 +8,7 @@ void Scene::addPlane(const Plane& plane) {
     planes.push_back(plane);
 }
 
-void Scene::addLight(const PointLight& light) {
+void Scene::addLight(const Light& light) {
     lights.push_back(light);
 }
 
@@ -20,6 +20,6 @@ const std::vector<Plane>& Scene::getPlanes() const {
     return planes;
 }
 
-const std::vector<PointLight>& Scene::getLights() const {
+const std::vector<Light>& Scene::getLights() const {
     return lights;
 }

@@ -8,6 +8,15 @@ Vector3 Point::toVector() const {
     return Vector3(x, y, z);
 }
 
+Matrix Point::getHomMatrix() const {
+        Matrix m(4,1);
+        m(0,0) = x;
+        m(1,0) = y;
+        m(2,0) = z;
+        m(3,0) = 1;
+        return m;
+}
+
 Point Point::operator+(const Vector3& v) const {
     return Point(x + v.x, y + v.y, z + v.z);
 }

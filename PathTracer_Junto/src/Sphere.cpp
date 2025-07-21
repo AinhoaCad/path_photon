@@ -1,4 +1,5 @@
 #include "Sphere.hpp"
+#include "Operations.hpp"
 #include <cmath>
 
 // Constructor
@@ -6,7 +7,7 @@ Sphere::Sphere(const Vector3& center, float radius, const Material& material, bo
     : center_(center), radius_(radius), material_(material), emision_(emision) {}
 
 // Intersección rayo-esfera
-bool Sphere::intersect(const Ray& ray, float& t) const {
+bool Sphere::intersect( Ray& ray, float& t) const {
     Vector3 oc = ray.origin() - center_;
     float a = ray.direction().dotProduct(ray.direction());
     float b = 2.0f * oc.dotProduct(ray.direction());
@@ -59,12 +60,9 @@ Vector3 Sphere::getCentro() const {
 
 Direction Sphere::getPointNormal(Point p) const {
     Operations op;
-    return op.norm(op.sub(p, center_));
+    return op.norm(op.sub(p, center_.toPoint()));
 }
 
-Pixel Sphere::getColor() const {
-    return material_.color;
-}
 
 bool Sphere::getEmision() const {
     return emision_;
@@ -79,6 +77,6 @@ void Sphere::setRadio(float r) {
     radius_ = r;
 }
 
-void Sphere::setColor(const Pixel& col) {
-    material_.color = col;
+void Sphere::setMaterial(const Material& material) {
+    material_ = material;
 }

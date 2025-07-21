@@ -5,6 +5,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include "Point.hpp"
+#include "Direction.hpp"
+
 class Vector3 {
 public:
     float x, y, z;
@@ -12,6 +15,11 @@ public:
     // Constructores
     Vector3();
     Vector3(float x, float y, float z);
+
+
+    // Conversión a Point y Direction
+    Point toPoint() const;
+    Direction toDirection() const;
 
     // Operadores básicos
     Vector3 operator+(const Vector3& other) const;

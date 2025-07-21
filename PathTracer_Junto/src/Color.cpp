@@ -46,3 +46,5 @@ Color Color::operator/(float scalar) const {
     return Color(R / scalar, G / scalar, B / scalar);
 }
 
+
+

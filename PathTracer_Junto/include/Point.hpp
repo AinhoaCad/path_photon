@@ -2,6 +2,7 @@
 #define POINT_HPP
 
 #include "Vector3.hpp"
+#include "Matrix.hpp"
 
 class Point {
 public:
@@ -14,6 +15,9 @@ public:
 
     // Conversión a Vector3
     Vector3 toVector() const;
+
+    // Operador Matriz homogénea
+    Matrix getHomMatrix() const;
 
     // Operaciones con vectores y otros puntos
     Point operator+(const Vector3& v) const;

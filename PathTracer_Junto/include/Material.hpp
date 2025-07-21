@@ -1,5 +1,4 @@
-#ifndef MATERIAL_HPP
-#define MATERIAL_HPP
+#pragma once
 
 #include "Color.hpp"
 
@@ -30,5 +29,3 @@ extern Material Diffuse_White;
 extern Material Diffuse_Red;
 extern Material Specular_Mirror;
 extern Material Dielectric_Glass;
-
-#endif // MATERIAL_HPP

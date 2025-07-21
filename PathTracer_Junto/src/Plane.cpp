@@ -7,7 +7,7 @@ Plane::Plane(const Vector3& normal, float d, const Material& material, bool emis
     : normal_(normal.normalized()), d_(d), material_(material), emision_(emision) {}
 
 // Intersección rayo-plano
-bool Plane::intersect(const Ray& ray, float& t) const {
+bool Plane::intersect(Ray& ray, float& t) const {
     float denom = normal_.dotProduct(ray.direction());
     if (std::fabs(denom) < 1e-6) return false;
 
@@ -42,9 +42,6 @@ Direction Plane::getPointNormal(Point p) const {
     return normal_;
 }
 
-Pixel Plane::getColor() const {
-    return material_.color;
-}
 
 bool Plane::getEmision() const {
     return emision_;
@@ -59,7 +56,7 @@ void Plane::setNormal(const Vector3& n) {
     normal_ = n.normalized();
 }
 
-void Plane::setColor(const Pixel& col) {
-    material_.color = col;
+void Plane::setMaterial(const Material& material) {
+    material_ = material;
 }
 

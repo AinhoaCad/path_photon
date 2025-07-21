@@ -25,7 +25,7 @@ public:
     // Setters (compatibilidad)
     void setDistancia(float d);
     void setNormal(const Vector3& n);
-    void setColor(const Pixel& col);
+    void setMaterial(const Material& material);
 
 protected:
     Vector3 normal_;
