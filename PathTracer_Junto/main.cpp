@@ -30,8 +30,9 @@ Scene createCornellBox() {
     return scene;
 }
 
-/*
-void testCameraConfiguration() {
+
+Camera testCameraConfiguration() {
+    /*
     Camera camera;
     camera.origen = Vector3(0.0f, 0.0f, 0.0f);
     camera.l = Vector3(-1.0f, 0.0f, 0.0f);
@@ -53,6 +54,8 @@ void testCameraConfiguration() {
 
     std::cout << "Configuración de la cámara verificada correctamente." << std::endl;
 
+    */
+
     //--------------------------------------------------------------------------------
     
     //Definir la camara
@@ -61,5 +64,32 @@ void testCameraConfiguration() {
     Direction u(0, 1, 0);
     Direction f(0, 0, 3);
     Camera camara(origen, l, u, f, 256, 256);
+
+    return camara;
 }
-    */
+
+int main() {
+
+    // Crear la escena
+    Scene scene = createCornellBox();
+    
+    // Configurar la cámara
+    Camera camera = testCameraConfiguration();
+    
+    // Generar imagen
+    Image image = camera.generateImage(scene.getPrimitives());
+
+    int numRays = 64; // Número de rayos por píxel
+    Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
+
+    //img.clampPixels();
+    //img.curvaGamma(0.5);
+    image.writePPM("imagenPrueba.ppm");
+    image1.writePPM("imagenPrueba1.ppm");
+
+    //img2.writePPM("imagenLuz1Rayo.ppm");
+    std::cout << "Imagen luz  con rebote generada" << std::endl;   
+    return 0;
+    
+}
+    

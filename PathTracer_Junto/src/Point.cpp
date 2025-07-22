@@ -31,3 +31,9 @@ std::ostream& operator<<(std::ostream& os, const Point& p) {
     os << "Point(" << p.x << ", " << p.y << ", " << p.z << ")";
     return os;
 }
+
+float Point::getX() const { return x; }
+
+float Point::getY() const { return y; }
+
+float Point::getZ() const { return z; }

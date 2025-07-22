@@ -23,3 +23,21 @@ const std::vector<Plane>& Scene::getPlanes() const {
 const std::vector<Light>& Scene::getLights() const {
     return lights;
 }
+
+// Método para obtener el número de primitivas en la escena
+size_t Scene::getNumPrimitives() const {
+    return spheres.size() + planes.size();
+}
+
+// Método para obtener las primitivas de la escena
+const std::vector<Primitive*> Scene::getPrimitives() const {
+    static std::vector<Primitive*> primitives;
+    primitives.clear();
+    for (const auto& sphere : spheres) {
+        primitives.push_back(const_cast<Sphere*>(&sphere));
+    }
+    for (const auto& plane : planes) {
+        primitives.push_back(const_cast<Plane*>(&plane));
+    }
+    return primitives;
+}

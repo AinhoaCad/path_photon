@@ -1,4 +1,4 @@
-#include "matrix.h"
+#include "matrix.hpp"
 #include <iostream>
 
 // Constructor: Inicializa una matriz con filas y columnas dadas (VACÍA)

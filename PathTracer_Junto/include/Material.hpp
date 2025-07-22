@@ -22,7 +22,15 @@ public:
             throw("Conservación de energía violada en el material.");
         }
     }
+
+    // DE MOMENTO SACAMOS EL COLOR DEL MATERIAL COMO EL COLOR DIFUSO PERO EN EL FUTURO SE PODRÍA HACER MÁS COMPLEJO
+    // USANDO POR EJEMPLO MEZCLA DE DIFUSO Y ESPECULAR 
+    Pixel toPixel() const {
+        return kd.toPixel();  // Usa kd como color principal del material
+    }
 };
+
+
 
 // Declaraciones de materiales predeterminados
 extern Material Diffuse_White;

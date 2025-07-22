@@ -27,6 +27,6 @@ public:
     // Método para generar un rayo hacia el centro de un píxel dado (i, j)
     Ray generateRay(int i, int j, std::string n);
 
-    Image generateImage(Primitive* primitives[], int numPrimitives);
-    Image generateImageMultipleRays(Primitive* primitives[], int numPrimitives, int numRays);
+    Image generateImage(const std::vector<Primitive*>& primitives);
+    Image generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays);
 };

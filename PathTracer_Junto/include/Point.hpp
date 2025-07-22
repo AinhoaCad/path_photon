@@ -1,5 +1,4 @@
-#ifndef POINT_HPP
-#define POINT_HPP
+#pragma once
 
 #include "Vector3.hpp"
 #include "Matrix.hpp"
@@ -26,6 +25,11 @@ public:
 
     // Utilidades
     friend std::ostream& operator<<(std::ostream& os, const Point& p);
-};
 
-#endif // POINT_HPP
+    // Getters
+    float getX() const;
+    float getY() const;
+    float getZ() const;
+    
+        
+};

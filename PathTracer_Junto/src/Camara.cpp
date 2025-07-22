@@ -1,6 +1,7 @@
 #include <vector>
 #include "Operations.hpp"
 #include "Camara.hpp"
+#include "Material.hpp"
 #include <ctime> // Para usar srand
 #include <cstdlib> // Para generar números aleatorios
 
@@ -48,76 +49,74 @@ Ray Camera::generateRay(int i, int j, std::string n) {
     return Ray(origen.toVector(), rayDirection.toVector()); // Devolvemos el rayo con origen en la cámara y dirección calculada
 }
 
-Image Camera::generateImage(Primitive* primitives[], int numPrimitives) {
+Image Camera::generateImage(const std::vector<Primitive*>& primitives) {
     Image image(pixelWidth, pixelHeight);
-    for (int i = 0; i < pixelHeight; ++i) {
-        for (int j = 0; j < pixelWidth; ++j) {
+    for (int i = 0; i < pixelHeight; i++) {
+        for (int j = 0; j < pixelWidth; j++) {
             Ray ray = generateRay(i, j, "uno");
             float t = -1;
             float mejorT = -1;
             Pixel p = {0, 0, 0}; // Si no intersecta, el color del píxel será este
-            // Mirar si el rayo intersecta con algún objeto
-            // Si intersecta, calcular el color del píxel
-            for (int k = 0; k < numPrimitives; k++) {
-                if (primitives[k]->intersect(ray, t)) {
-                    // Si el objeto intersecta, el color del píxel
-                    // es el color del objeto si es el más cercano
+            for (auto& primitive : primitives) {
+                if (primitive->intersect(ray, t)) {
                     if ((t < mejorT || mejorT == -1) && t > 0) {
                         mejorT = t;
-                        p = primitives[k]->getColor();
-                        //cout << "Intersecta con objeto " << k << " en t = " << t << endl;
+                        p = primitive->getMaterial().toPixel(); // Obtenemos el color del material de la primitiva
                     }
                 }
             }
-            image.setPixel(i,j, p);
+            image.setPixel(i, j, p);
         }
     }
     return image;
 }
 
-Image Camera::generateImageMultipleRays(Primitive* primitives[], int numPrimitives, int numRays) {
-        Image image(pixelWidth, pixelHeight);
-        srand(time(NULL));
-        float t[numRays];
-        float mejorT[numRays];
-        int mejorPrimitiva[numRays];
-        for (int i = 0; i < pixelHeight; i++) {
-            for (int j = 0; j < pixelWidth; j++) {
-                for (int r = 0; r < numRays; r++) {
-                    Ray ray = generateRay(i, j, "varios");
-                    //cout << "Rayo " << r << " generado" << endl;
-                    t[r] = -1;
-                    mejorT[r] = -1;
-                    // Mirar si el rayo intersecta con algún objeto
-                    // Si intersecta, calcular el color del píxel
-                    for (int k = 0; k < numPrimitives; k++) {
-                        if (primitives[k]->intersect(ray, t[r])) {
-                            // Si el objeto intersecta, el color del píxel
-                            // es el color del objeto si es el más cercano
-                            if ((t[r] < mejorT[r] || mejorT[r] == -1) && t[r] > 0) {
-                                mejorT[r] = t[r];
-                                mejorPrimitiva[r] = k;
-                                //cout << "Intersecta con objeto " << k << " en t = " << t << endl;
-                            }
+Image Camera::generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays) {
+    Image image(pixelWidth, pixelHeight);
+    srand(static_cast<unsigned>(time(NULL)));
+
+    int numPrimitives = static_cast<int>(primitives.size());
+    std::vector<float> t(numRays, -1);
+    std::vector<float> mejorT(numRays, -1);
+    std::vector<int> mejorPrimitiva(numRays, -1);
+
+    for (int i = 0; i < pixelHeight; i++) {
+        for (int j = 0; j < pixelWidth; j++) {
+
+            for (int r = 0; r < numRays; r++) {
+                Ray ray = generateRay(i, j, "varios");
+                t[r] = -1;
+                mejorT[r] = -1;
+
+                for (int k = 0; k < numPrimitives; k++) {
+                    if (primitives[k]->intersect(ray, t[r])) {
+                        if ((t[r] < mejorT[r] || mejorT[r] == -1) && t[r] > 0) {
+                            mejorT[r] = t[r];
+                            mejorPrimitiva[r] = k;
                         }
                     }
                 }
-                //cout << "Todos los rayos de un pixel generados" << endl;
-                Pixel p = {0, 0, 0}; // Si no intersecta, el color del píxel será este
-                for (int r = 0; r < numRays; r++) {
-                    if (mejorT[r] != -1) { //Si ha intersectado con el objeto
-                        Pixel p2 = primitives[mejorPrimitiva[r]]->getColor();
-                        p.r += p2.r;
-                        p.g += p2.g;
-                        p.b += p2.b;
-                    }
-                }
-                //Nos quedamos con la media de los colores
-                p.r /= numRays;
-                p.g /= numRays;
-                p.b /= numRays;
-                image.setPixel(i,j, p);
             }
+
+            Pixel p = {0, 0, 0}; // Color por defecto si no hay intersección
+
+            for (int r = 0; r < numRays; r++) {
+                if (mejorT[r] != -1) {
+                    Pixel p2 = primitives[mejorPrimitiva[r]]->getMaterial().toPixel(); // Obtenemos el color del material de la primitiva
+                    p.r += p2.r;
+                    p.g += p2.g;
+                    p.b += p2.b;
+                }
+            }
+
+            // Promediamos el color
+            p.r /= numRays;
+            p.g /= numRays;
+            p.b /= numRays;
+
+            image.setPixel(i, j, p);
         }
-        return image;
     }
+
+    return image;
+}

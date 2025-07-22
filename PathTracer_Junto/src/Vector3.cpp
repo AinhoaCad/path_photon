@@ -1,4 +1,6 @@
 #include "Vector3.hpp"
+#include "Direction.hpp" 
+#include "Point.hpp"
 
 // Constructores
 Vector3::Vector3() : x(0), y(0), z(0) {}

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <sstream>
-#include "Image.h"
+#include "Image.hpp"
 
 
 // Constructor por defecto

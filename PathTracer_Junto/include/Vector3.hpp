@@ -1,12 +1,15 @@
-#ifndef VECTOR3_HPP
-#define VECTOR3_HPP
+#pragma once
 
 #include <cmath>
 #include <iostream>
 #include <algorithm>
 
-#include "Point.hpp"
-#include "Direction.hpp"
+//#include "Point.hpp"
+//#include "Direction.hpp"
+
+class Point;  
+class Direction;  
+
 
 class Vector3 {
 public:
@@ -51,5 +54,3 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Vector3& v);
 };
-
-#endif // VECTOR3_HPP

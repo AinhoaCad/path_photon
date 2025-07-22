@@ -18,8 +18,7 @@ public:
     Vector3 getNormal(const Ray& ray, float t) const;
     Direction getPointNormal(Point p) const override;
 
-    Material getMaterial() const;
-    Pixel getColor() const override; // Proxy desde material
+    Material getMaterial() const override;
     bool getEmision() const override;
 
     // Setters (compatibilidad)

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cmath>  // Para usar sqrt
-#include "operations.h"
+#include "Operations.hpp"
 
 // Implementación de las funciones
 Point Operations::add(Point p, Direction d) {

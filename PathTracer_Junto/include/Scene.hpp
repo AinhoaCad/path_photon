@@ -19,6 +19,14 @@ public:
     void addPlane(const Plane& plane);
     void addLight(const Light& light);
 
+    // Método para obtener el número de primitivas en la escena
+    size_t getNumPrimitives() const;
+
+    // Método para obtener las primitivas de la escena
+    const std::vector<Primitive*> getPrimitives() const;
+
+
+
     // Métodos para obtener los elementos de la escena
     const std::vector<Sphere>& getSpheres() const;
     const std::vector<Plane>& getPlanes() const;
