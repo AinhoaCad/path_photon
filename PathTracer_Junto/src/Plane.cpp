@@ -9,11 +9,12 @@ Plane::Plane(const Vector3& normal, float d, const Material& material, bool emis
 // Intersección rayo-plano
 bool Plane::intersect(Ray& ray, float& t) const {
     float denom = normal_.dotProduct(ray.direction());
-    if (std::fabs(denom) < 1e-6) return false;
+    if (std::fabs(denom) < 1e-6) return false; // Rayo paralelo al plano
 
-    float num = normal_.dotProduct(ray.origin()) + d_;
-    t = -num / denom;
-    return t > 0;
+    float numerador = - (normal_.dotProduct(ray.origin()) + d_);
+    t = numerador / denom;
+
+    return t > 1e-4; // evitar autointersección o planos demasiado cercanos
 }
 
 // Getters modernos

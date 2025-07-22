@@ -33,7 +33,11 @@ public:
 
 
 // Declaraciones de materiales predeterminados
-extern Material Diffuse_White;
-extern Material Diffuse_Red;
-extern Material Specular_Mirror;
-extern Material Dielectric_Glass;
+extern Material whiteDiffuse;
+extern Material redDiffuse;
+extern Material greenDiffuse;
+extern Material blueDiffuse;
+extern Material purpleDiffuse;
+extern Material grayDiffuse;
+extern Material mirrorSpecular;
+extern Material glassDielectric;

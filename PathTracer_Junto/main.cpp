@@ -2,28 +2,70 @@
 #include "Scene.hpp"
 #include "Camara.hpp"
 #include "Primitive.hpp"
+#include "Material.hpp"
 
 Scene createCornellBox() {
     Scene scene;
 
-    // Materiales
-    Material redDiffuse(Color(1.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), 1.0f);
-    Material greenDiffuse(Color(0.0f, 1.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), 1.0f);
-    Material whiteDiffuse(Color(0.8f, 0.8f, 0.8f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 0.0f), 1.0f);
 
-    // Paredes como planos
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));   // Izquierda
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), -1.0f, greenDiffuse, false)); // Derecha
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, whiteDiffuse, false)); // Piso
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), -1.0f, whiteDiffuse, false)); // Techo
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, 1.0f), 3.0f, whiteDiffuse, false));  // Fondo
+    /*
+    //Definir el plano
+    float d = 1.0f;
+    Direction nl(1, 0, 0);
+    Pixel coll = {1, 0, 0}; //rojo
+    Plane planol(d,nl,coll,false); 
+  
+    Direction nr(-1, 0, 0);
+    Pixel colr = {0, 1, 0};  //verde
+    Plane planor(d,nr,colr,false);
+
+    Direction nf(0, 1, 0);
+    Pixel colf = {0.5, 0.5, 0.5}; //gris
+    Plane planof(d,nf,colf,false);
+
+    Direction nc(0, -1, 0);
+    Pixel colc = {0.5, 0.5, 0.5}; //gris
+    Plane planoc(d,nc,colc,false);
+
+    Direction nb(0, 0, -1);
+    Pixel colb = {0.5, 0.5, 0.5}; //gris
+    Plane planob(d,nb,colb,false);
+    
+    
+    //Definir las esfera
+    Point lcentro(-0.5, -0.7, 0.25);
+    float radio = 0.3;
+    Pixel lcolesfera = {0.5, 0, 0.5}; //morado
+    Sphere lesfera(lcentro, radio,lcolesfera, false);
+
+
+    Pixel rcolesfera = {0, 0, 1}; //azul
+    Point rcentro(0.5, -0.7, -0.25);
+    Sphere resfera(rcentro, radio,rcolesfera,false);
+    
+    */
+
+    // Pared izquierda (rojo), x = -1
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));
+
+    // Pared derecha (verde), x = 1
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse, false));
+
+    // Suelo, y = -1
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse, false));
+
+    // Techo, y = 1
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse, false));
+
+    // Fondo, z = 1
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse, false));
 
     // Esferas
-    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, whiteDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, whiteDiffuse, false));
+    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
     
     // Luz puntual
-    scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
+    //scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
 
     std::cout << "Escena creada." << std::endl;
 
@@ -32,29 +74,6 @@ Scene createCornellBox() {
 
 
 Camera testCameraConfiguration() {
-    /*
-    Camera camera;
-    camera.origen = Vector3(0.0f, 0.0f, 0.0f);
-    camera.l = Vector3(-1.0f, 0.0f, 0.0f);
-    camera.u = Vector3(0.0f, 1.0f, 0.0f);
-    camera.f = Vector3(0.0f, 0.0f, -1.0f);
-    camera.pixelWidth = 256;
-    camera.pixelHeight = 256;
-    camera.onepixelWidth = camera.anchoPlano / camera.pixelWidth;
-    camera.onepixelHeight = camera.altoPlano / camera.pixelHeight;
-
-    assert(camera.origen == Point(0.0f, 0.0f, 0.0f));
-    assert(camera.left == Direction(-1.0f, 0.0f, 0.0f));
-    assert(camera.up == Direction(0.0f, 1.0f, 0.0f));
-    assert(camera.forward == Direction(0.0f, 0.0f, -1.0f));
-    assert(camera.pixelWidth == 256);
-    assert(camera.pixelHeight == 256);
-    assert(camera.onepixelWidth == (camera.anchoPlano / camera.pixelWidth));
-    assert(camera.onepixelHeight == (camera.altoPlano / camera.pixelHeight));
-
-    std::cout << "Configuración de la cámara verificada correctamente." << std::endl;
-
-    */
 
     //--------------------------------------------------------------------------------
     
