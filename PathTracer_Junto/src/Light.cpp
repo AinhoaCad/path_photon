@@ -7,7 +7,7 @@ Light::Light(Point origen, Pixel power) : origen(origen), power(power) {}
 Light::Light(const Vector3& origenVec, const Pixel& powerPixel)
     : origen(Point(origenVec)), power(powerPixel) {}
 
-Pixel Light::calcularIntensidadLuz(Point p) {
+Pixel Light::calcularIntensidadLuz(Point p) const {
     double denominador = pow(Operations::mod(Operations::sub(origen, p)), 2);
     float r = power.r / denominador;
     float g = power.g / denominador;
@@ -15,7 +15,7 @@ Pixel Light::calcularIntensidadLuz(Point p) {
     return Pixel{r, g, b};
 }
 
-Pixel Light::BRDF(Pixel color) {
+Pixel Light::BRDF(Pixel color) const {
     return Pixel{
         color.r / float(M_PI),
         color.g / float(M_PI),
@@ -23,14 +23,14 @@ Pixel Light::BRDF(Pixel color) {
     };
 }
 
-float Light::LambertianCos(Direction normal, Point p) {
+float Light::LambertianCos(Direction normal, Point p) const {
     Direction numerador = Operations::sub(origen, p);
     numerador = Operations::norm(numerador);
     float coseno = fabs(Operations::dot(numerador, normal));
     return coseno;
 }
 
-Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) {
+Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
     Pixel intensidad = calcularIntensidadLuz(p);
     float coseno = LambertianCos(normal, p);
     Pixel brdf = BRDF(color);

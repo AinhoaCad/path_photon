@@ -7,7 +7,7 @@
 #include "Ray.hpp"
 #include "Primitive.hpp"
 #include "Matrix.hpp"
-
+#include "Light.hpp"
 class Camera {
 public:
     Point origen;
@@ -29,4 +29,6 @@ public:
 
     Image generateImage(const std::vector<Primitive*>& primitives);
     Image generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays);
+    Image generateImageWithLightingOneRay(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights);
+    Image generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays);
 };

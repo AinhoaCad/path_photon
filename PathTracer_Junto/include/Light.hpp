@@ -16,8 +16,8 @@ public:
     Light(const Vector3& origenVec, const Pixel& powerPixel);
 
     // Métodos
-    Pixel calcularIntensidadLuz(Point p);
-    Pixel BRDF(Pixel color);
-    float LambertianCos(Direction normal, Point p);
-    Pixel calcularLuz(Point p, Direction normal, Pixel color);
+    Pixel calcularIntensidadLuz(Point p) const;
+    Pixel BRDF(Pixel color) const;
+    float LambertianCos(Direction normal, Point p) const;
+    Pixel calcularLuz(Point p, Direction normal, Pixel color) const;
 };

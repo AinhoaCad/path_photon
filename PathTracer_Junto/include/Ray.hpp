@@ -18,7 +18,7 @@ public:
     Ray operator+(const Vector3& offset) const;  // Desplaza el rayo
     Ray operator-(const Vector3& offset) const;  // Desplaza el rayo en dirección opuesta
 
-private:
+public:
     Vector3 origin_;  // Origen del rayo
     Vector3 direction_;  // Dirección del rayo
 };

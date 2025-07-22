@@ -7,44 +7,6 @@
 Scene createCornellBox() {
     Scene scene;
 
-
-    /*
-    //Definir el plano
-    float d = 1.0f;
-    Direction nl(1, 0, 0);
-    Pixel coll = {1, 0, 0}; //rojo
-    Plane planol(d,nl,coll,false); 
-  
-    Direction nr(-1, 0, 0);
-    Pixel colr = {0, 1, 0};  //verde
-    Plane planor(d,nr,colr,false);
-
-    Direction nf(0, 1, 0);
-    Pixel colf = {0.5, 0.5, 0.5}; //gris
-    Plane planof(d,nf,colf,false);
-
-    Direction nc(0, -1, 0);
-    Pixel colc = {0.5, 0.5, 0.5}; //gris
-    Plane planoc(d,nc,colc,false);
-
-    Direction nb(0, 0, -1);
-    Pixel colb = {0.5, 0.5, 0.5}; //gris
-    Plane planob(d,nb,colb,false);
-    
-    
-    //Definir las esfera
-    Point lcentro(-0.5, -0.7, 0.25);
-    float radio = 0.3;
-    Pixel lcolesfera = {0.5, 0, 0.5}; //morado
-    Sphere lesfera(lcentro, radio,lcolesfera, false);
-
-
-    Pixel rcolesfera = {0, 0, 1}; //azul
-    Point rcentro(0.5, -0.7, -0.25);
-    Sphere resfera(rcentro, radio,rcolesfera,false);
-    
-    */
-
     // Pared izquierda (rojo), x = -1
     scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));
 
@@ -65,7 +27,7 @@ Scene createCornellBox() {
     scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
     
     // Luz puntual
-    //scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
+    scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
 
     std::cout << "Escena creada." << std::endl;
 
@@ -73,7 +35,7 @@ Scene createCornellBox() {
 }
 
 
-Camera testCameraConfiguration() {
+Camera CameraConfiguration() {
 
     //--------------------------------------------------------------------------------
     
@@ -93,7 +55,7 @@ int main() {
     Scene scene = createCornellBox();
     
     // Configurar la cámara
-    Camera camera = testCameraConfiguration();
+    Camera camera = CameraConfiguration();
     
     // Generar imagen
     Image image = camera.generateImage(scene.getPrimitives());
@@ -101,10 +63,16 @@ int main() {
     int numRays = 64; // Número de rayos por píxel
     Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
 
+    //Generar imagen con luz
+    Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
+    Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
+
     //img.clampPixels();
     //img.curvaGamma(0.5);
-    image.writePPM("imagenPrueba.ppm");
-    image1.writePPM("imagenPrueba1.ppm");
+    image.writePPM("imagen1Rayo.ppm");
+    image1.writePPM("imagenMultiplesRayos.ppm");
+    image2.writePPM("imagenLuz1Rayo.ppm");
+    image3.writePPM("imagenLuzMultiplesRayos.ppm");
 
     //img2.writePPM("imagenLuz1Rayo.ppm");
     std::cout << "Imagen luz  con rebote generada" << std::endl;   
