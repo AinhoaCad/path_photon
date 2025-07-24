@@ -31,4 +31,5 @@ public:
     Image generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays);
     Image generateImageWithLightingOneRay(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights);
     Image generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays);
+    Image generateImageWithLightingMultipleRaysConRebotes(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays, int maxBounces); 
 };

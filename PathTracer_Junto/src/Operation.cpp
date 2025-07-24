@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <cmath>  // Para usar sqrt
 #include "Operations.hpp"
@@ -64,4 +66,34 @@ void Operations::show(Point p) {
 
 void Operations::show(Direction d) {
     std::cout << d << std::endl;
+}
+
+Direction Operations::randomHemisphereDirection(const Direction& normal) {
+    float u = static_cast<float>(rand()) / RAND_MAX;
+    float v = static_cast<float>(rand()) / RAND_MAX;
+
+    float theta = acos(sqrt(1.0f - u));
+    float phi = 2.0f * M_PI * v;
+
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+
+    // Coordenadas locales
+    Direction local(x, y, z);
+
+    // Construir base ortonormal
+    Direction up = normal;
+    Direction right = Operations::norm(Operations::cross(up, Direction(0.0072, 1.0, 0.0034)));
+    Direction forward = Operations::cross(right, up);
+
+    Direction world = Operations::add(
+        Operations::add(
+            Operations::mult(right, x),
+            Operations::mult(forward, y)
+        ),
+        Operations::mult(up, z)
+    );
+
+    return Operations::norm(world);
 }

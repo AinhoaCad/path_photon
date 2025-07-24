@@ -1,9 +1,12 @@
 #pragma once
 
+
+
 #include <iostream>
 #include <math.h>
 #include "Point.hpp"
 #include "Direction.hpp"
+#include <cmath>
 
 class Operations {
 public:
@@ -40,4 +43,7 @@ public:
     // MOSTRAR POR PANTALLA
     static void show(Point p);
     static void show(Direction d);
+
+    static Direction randomHemisphereDirection(const Direction& normal);
+
 };

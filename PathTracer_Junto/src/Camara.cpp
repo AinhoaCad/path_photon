@@ -281,3 +281,168 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
         
         return image;
     }
+
+    Pixel calcularReboteIndirecto(
+        const Point& origen,
+        const Direction& normal,
+        const std::vector<Primitive*>& primitives,
+        const std::vector<Light>& lights,
+        int depth,
+        int maxBounces
+    ) {
+        if (depth >= maxBounces) return {0, 0, 0};
+
+        // Generar dirección aleatoria en el hemisferio
+        Direction dirRebote = Operations::randomHemisphereDirection(normal);
+
+        // Nuevo rayo desplazado ligeramente para evitar autointersección
+        Point newOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
+        Ray bouncedRay(newOrigin.toVector(), dirRebote.toVector());
+
+        // Buscar intersección con escena
+        float t = -1;
+        float bestT = -1;
+        Primitive* closest = nullptr;
+        Pixel baseColor = {0, 0, 0};
+
+        for (auto& prim : primitives) {
+            if (prim->intersect(bouncedRay, t) && (t < bestT || bestT < 0) && t > 0) {
+                bestT = t;
+                closest = prim;
+                baseColor = prim->getMaterial().toPixel();
+            }
+        }
+
+        if (!closest) return {0, 0, 0};
+
+        Point newHit = Operations::add(bouncedRay.origin_.toPoint(), Operations::mult(bouncedRay.direction_.toDirection(), bestT));
+        Direction newNormal = closest->getPointNormal(newHit);
+
+        // Luz directa en el nuevo punto
+        Pixel colorDirecto = {0, 0, 0};
+        for (size_t l = 0; l < lights.size(); ++l) {
+            Point shadowOrigin = Operations::add(newHit, Operations::mult(newNormal, 0.001f));
+            Direction toLight = Operations::sub(lights[l].origen, shadowOrigin);
+            float dist = Operations::mod(toLight);
+            toLight = Operations::norm(toLight);
+            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
+
+            bool inShadow = false;
+            for (auto& prim : primitives) {
+                float shadowT;
+                if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
+                    inShadow = true;
+                    break;
+                }
+            }
+
+            if (!inShadow) {
+                Pixel contrib = lights[l].calcularLuz(newHit, newNormal, baseColor);
+                colorDirecto.r += contrib.r;
+                colorDirecto.g += contrib.g;
+                colorDirecto.b += contrib.b;
+            }
+        }
+
+        // Recursivamente obtener rebote adicional
+        Pixel colorRebote = calcularReboteIndirecto(newHit, newNormal, primitives, lights, depth + 1, maxBounces);
+
+        // Atenuar contribución
+        Pixel total;
+        total.r = (colorDirecto.r + colorRebote.r * 0.5f);
+        total.g = (colorDirecto.g + colorRebote.g * 0.5f);
+        total.b = (colorDirecto.b + colorRebote.b * 0.5f);
+
+        return total;
+    }
+
+
+    Image Camera::generateImageWithLightingMultipleRaysConRebotes(
+        const std::vector<Primitive*>& primitives,
+        const std::vector<Light>& lights,
+        int numRays,
+        int maxBounces
+    ) 
+    {
+
+        Image image(pixelWidth, pixelHeight);
+        srand(static_cast<unsigned>(time(0)));
+
+        for (int i = 0; i < pixelHeight; ++i) {
+            for (int j = 0; j < pixelWidth; ++j) {
+                Pixel accumulatedColor = {0, 0, 0};
+
+                for (int r = 0; r < numRays; ++r) {
+                    Ray ray = generateRay(i, j, "varios");
+                    float t = -1;
+                    float bestT = -1;
+                    Primitive* closestPrimitive = nullptr;
+                    Pixel color = {0, 0, 0};
+                    Pixel colorPrimitive = {0, 0, 0};
+
+                    for (size_t k = 0; k < primitives.size(); ++k) {
+                        if (primitives[k]->intersect(ray, t)) {
+                            if ((t < bestT || bestT == -1) && t > 0) {
+                                bestT = t;
+                                colorPrimitive = primitives[k]->getMaterial().toPixel();
+                                closestPrimitive = primitives[k];
+                            }
+                        }
+                    }
+
+                    if (bestT > 0 && closestPrimitive != nullptr) {
+                        Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
+                        Direction normal = closestPrimitive->getPointNormal(hitPoint);
+
+                        std::vector<bool> inShadow(lights.size(), false);
+
+                        for (size_t l = 0; l < lights.size(); ++l) {
+                            Point shadowOrigin = Operations::add(hitPoint, Operations::mult(normal, 0.001f));
+                            Direction shadowRayDir = Operations::sub(lights[l].origen, shadowOrigin);
+                            float maxDist = Operations::mod(shadowRayDir);
+                            shadowRayDir = Operations::norm(shadowRayDir);
+                            Ray shadowRay(shadowOrigin.toVector(), shadowRayDir.toVector());
+
+                            for (size_t k = 0; k < primitives.size(); ++k) {
+                                float shadowT;
+                                if (primitives[k]->intersect(shadowRay, shadowT)) {
+                                    if (shadowT > 0.001 && shadowT < maxDist) {
+                                        inShadow[l] = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        for (size_t l = 0; l < lights.size(); l++) {
+                            if (!inShadow[l]) {
+                                Pixel lightContribution = lights[l].calcularLuz(hitPoint, normal, colorPrimitive);
+                                color.r += lightContribution.r;
+                                color.g += lightContribution.g;
+                                color.b += lightContribution.b;
+                            }
+                        }
+
+                        // Aquí añadimos la luz indirecta
+                        Pixel indirect = calcularReboteIndirecto(hitPoint, normal, primitives, lights, 0, maxBounces);
+                        color.r += indirect.r;
+                        color.g += indirect.g;
+                        color.b += indirect.b;
+                    }
+
+                    accumulatedColor.r += color.r;
+                    accumulatedColor.g += color.g;
+                    accumulatedColor.b += color.b;
+                }
+
+                accumulatedColor.r /= numRays;
+                accumulatedColor.g /= numRays;
+                accumulatedColor.b /= numRays;
+
+                image.setPixel(i, j, accumulatedColor);
+            }
+        }
+
+        return image;
+    }
+        

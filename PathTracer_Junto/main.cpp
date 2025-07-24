@@ -29,7 +29,7 @@ Scene createCornellBox() {
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
-    std::cout << "Escena creada." << std::endl;
+    std::cout << "Escena del Cornell Box creada." << std::endl;
 
     return scene;
 }
@@ -51,37 +51,84 @@ Camera CameraConfiguration() {
 
 int main() {
 
+    //--------------------------------------------------------------
+    // VARIABLES Y PARAMETROS DE RENDERIZADO
+    //--------------------------------------------------------------
+
+    int numRays = 64; // Número de rayos por píxel
+    int maxBounces = 2; // Número máximo de rebotes de luz
+
+    //--------------------------------------------------------------
+    // ESCENA Y CÁMARA
+    //--------------------------------------------------------------
+
     // Crear la escena
     Scene scene = createCornellBox();
     
     // Configurar la cámara
     Camera camera = CameraConfiguration();
+
+    /*
     
-    // Generar imagen
-    Image image = camera.generateImage(scene.getPrimitives());
+    //--------------------------------------------------------
+    // IMAGEN 0: Primera imagen sin luz y un rayo por pixel
+    //------------------------------------------------------ 
+    
+    Image image0 = camera.generateImage(scene.getPrimitives());
+    image0.writePPM("imagen1Rayo.ppm");
 
-    int numRays = 64; // Número de rayos por píxel
+    //--------------------------------------------------------
+    // IMAGEN 1: Segunda imagen con múltiples rayos por pixel
+    //------------------------------------------------------
+
     Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
-
-    //Generar imagen con luz
-    Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
-    Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
-
-    image.writePPM("imagen1Rayo.ppm");
     image1.writePPM("imagenMultiplesRayos.ppm");
+
+    //--------------------------------------------------------
+    // IMAGEN 2: Tercera imagen con luz y un rayo por pixel
+    //------------------------------------------------------
+
+    Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
     image2.writePPM("imagenLuz1Rayo.ppm");
+
+    //--------------------------------------------------------
+    // IMAGEN 3: Cuarta imagen con luz y múltiples rayos por pixel
+    //------------------------------------------------------
+
+    Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
     image3.writePPM("imagenLuzMultiplesRayos.ppm");
 
-    //Generar imagen con aplicaciones
+    //--------------------------------------------------------
+    // IMAGEN 4: Quinta imagen con luz, múltiples rayos y modificaciones
+    //------------------------------------------------------
+
     Image image4 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
 
+    //Modificaciones 
     image4.clampPixels();
     image4.curvaGamma(0.5);
 
     image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
 
-    //img2.writePPM("imagenLuz1Rayo.ppm");
-    std::cout << "Imagen luz  con rebote generada" << std::endl;   
+    */
+
+    //--------------------------------------------------------
+    // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
+    //------------------------------------------------------
+
+    Image image5 = camera.generateImageWithLightingMultipleRaysConRebotes(scene.getPrimitives(), scene.getLights(), numRays, maxBounces);
+    
+    //Modificaciones
+    image5.clampPixels();
+    image5.curvaGamma(0.5);
+
+    image5.writePPM("imagenLuzRebotesModificaciones.ppm");
+
+
+    //--------------------------------------------------------------
+    // Mostrar mensaje de finalización
+    //--------------------------------------------------------------
+    std::cout << "IMAGENES GENERADAS" << std::endl;   
     return 0;
     
 }
