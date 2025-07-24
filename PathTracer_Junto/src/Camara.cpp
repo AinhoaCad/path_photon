@@ -184,7 +184,7 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
                         numSombras++;
                     }
                 }
-
+                // Si todas las luces están en sombra, el color del píxel será negro
                 if (numSombras == numLights) {
                     p = {0, 0, 0}; // Todo en sombra -> negro
                 }
@@ -196,81 +196,88 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
 }
 
 
-
-Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays){
-    Image image(pixelWidth, pixelHeight);
-    srand(static_cast<unsigned>(time(0)));
-
-    for (int i = 0; i < pixelHeight; ++i) {
-        for (int j = 0; j < pixelWidth; ++j) {
-            Pixel accumulatedColor{0.f, 0.f, 0.f};
-
-            for (int r = 0; r < numRays; ++r) {
-                Ray ray = generateRay(i, j, "varios");
-                float bestT = -1.f;
-                Primitive* closestPrimitive = nullptr;
-                Pixel color{0.f, 0.f, 0.f};
-
-                // Buscamos la intersección más cercana
-                for (auto* primitive : primitives) {
-                    float t = -1.f;
-                    if (primitive->intersect(ray, t) && t > 0.f && (bestT < 0.f || t < bestT)) {
-                        bestT = t;
-                        closestPrimitive = primitive;
-                        color = primitive->getMaterial().toPixel(); // Obtenemos el color del material
-                    }
-                }
-
-                if (bestT > 0.f && closestPrimitive != nullptr) {
-                    Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
-                    Direction normal = closestPrimitive->getPointNormal(hitPoint);
-
-                    // Vector para sombras
-                    std::vector<bool> inShadow(lights.size(), false);
-
-                    for (size_t l = 0; l < lights.size(); ++l) {
-                        Point shadowOrigin = Operations::add(hitPoint, Operations::mult(normal, 0.001f));
-                        Direction shadowRayDir = Operations::sub(lights[l].origen, shadowOrigin);
-                        float maxDist = Operations::mod(shadowRayDir);
-                        shadowRayDir = Operations::norm(shadowRayDir);
-
-                        Ray shadowRay(shadowOrigin.toVector(), shadowRayDir.toVector());
-
-                        for (auto* primitive : primitives) {
-                            float shadowT;
-                            if (primitive->intersect(shadowRay, shadowT)) {
-                                if (shadowT > 0.001f && shadowT < maxDist) {
-                                    inShadow[l] = true;
-                                    break;
-                                }
+    Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays){
+        Image image(pixelWidth, pixelHeight);
+        srand(static_cast<unsigned>(time(0)));
+        
+        for (int i = 0; i < pixelHeight; ++i) {
+            for (int j = 0; j < pixelWidth; ++j) {
+                Pixel accumulatedColor = {0, 0, 0}; // Para acumular el color de cada rayo
+                
+                for (int r = 0; r < numRays; ++r) {
+                    Ray ray = generateRay(i, j, "varios");
+                    float t = -1;
+                    float bestT = -1;
+                    Primitive* closestPrimitive = nullptr;
+                    Pixel color = {0, 0, 0}; // Color negro por defecto para cada rayo
+                    Pixel colorPrimitive = {0,0,0};
+                    // Comprobamos intersección con objetos
+                    for (size_t k = 0; k < primitives.size(); k++) {
+                        if (primitives[k]->intersect(ray, t)) {
+                            if ((t < bestT || bestT == -1) && t > 0) {
+                                bestT = t;
+                                colorPrimitive = primitives[k]->getMaterial().toPixel();
+                                closestPrimitive = primitives[k];
                             }
                         }
                     }
 
-                    // Suma contribuciones de luz no en sombra
-                    for (size_t l = 0; l < lights.size(); ++l) {
-                        if (!inShadow[l]) {
-                            Pixel lightContribution = lights[l].calcularLuz(hitPoint, normal, color);
-                            color.r += lightContribution.r;
-                            color.g += lightContribution.g;
-                            color.b += lightContribution.b;
+                    // Si hay intersección, calculamos la iluminación
+                    if (bestT > 0 && closestPrimitive != nullptr) {
+                        Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
+                        Direction normal = closestPrimitive->getPointNormal(hitPoint);
+                        //evitar autointersecciones
+                        std::vector<bool> inShadow(lights.size(), false);
+
+                        // Cálculo de sombras para cada fuente de luz
+                        for (size_t l = 0; l < lights.size(); ++l) {
+                            //inShadow[l]=false;
+                            Point shadowOrigin = Operations::add(hitPoint, Operations::mult(normal, 0.001f));
+
+                            Direction shadowRayDir = Operations::sub(lights[l].origen, shadowOrigin);
+                            float maxDist = Operations::mod(shadowRayDir);
+                            shadowRayDir = Operations::norm(shadowRayDir);
+
+                            //Point shadowRayOrigin = hitPoint;
+                            Ray shadowRay(shadowOrigin.toVector(), shadowRayDir.toVector());
+
+                            for (size_t k = 0; k < primitives.size(); k++) {
+                                float shadowT;
+                                if (primitives[k]->intersect(shadowRay, shadowT)) {
+                                    // Verifica si la intersección está en el rango válido
+                                    if (shadowT > 0.001 && shadowT < maxDist) {
+                                        inShadow[l] = true; // Está en sombra para esta luz
+                                        break; // No necesitamos seguir comprobando más luces
+                                    }
+                                }
+                            }
                         }
-                    }
+                            // Si no hay sombra para esta luz, añadimos su contribución
+                            for (size_t l = 0; l < lights.size(); l++) {
+                                if (!inShadow[l]) {
+                                    Pixel lightContribution = lights[l].calcularLuz(hitPoint, normal, colorPrimitive);
+                                    color.r = (color.r + lightContribution.r);
+                                    color.g = (color.g + lightContribution.g);
+                                    color.b = (color.b + lightContribution.b);
+                                }
+                            }
+                        }
+                    
+                    // Acumula el color calculado para cada rayo
+                    accumulatedColor.r += color.r;
+                    accumulatedColor.g += color.g;
+                    accumulatedColor.b += color.b;
                 }
+                
+                // Calcula la media del color para los múltiples rayos
+                accumulatedColor.r /= numRays;
+                accumulatedColor.g /= numRays;
+                accumulatedColor.b /= numRays;
 
-                accumulatedColor.r += color.r;
-                accumulatedColor.g += color.g;
-                accumulatedColor.b += color.b;
+                // Establece el color final en la imagen
+                image.setPixel(i, j, accumulatedColor);
             }
-
-            // Promediar color
-            accumulatedColor.r /= numRays;
-            accumulatedColor.g /= numRays;
-            accumulatedColor.b /= numRays;
-
-            image.setPixel(i, j, accumulatedColor);
         }
+        
+        return image;
     }
-
-    return image;
-}

@@ -67,12 +67,18 @@ int main() {
     Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
     Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
 
-    //img.clampPixels();
-    //img.curvaGamma(0.5);
     image.writePPM("imagen1Rayo.ppm");
     image1.writePPM("imagenMultiplesRayos.ppm");
     image2.writePPM("imagenLuz1Rayo.ppm");
     image3.writePPM("imagenLuzMultiplesRayos.ppm");
+
+    //Generar imagen con aplicaciones
+    Image image4 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
+
+    image4.clampPixels();
+    image4.curvaGamma(0.5);
+
+    image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
 
     //img2.writePPM("imagenLuz1Rayo.ppm");
     std::cout << "Imagen luz  con rebote generada" << std::endl;   
