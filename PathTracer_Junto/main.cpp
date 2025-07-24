@@ -27,7 +27,7 @@ Scene createCornellBox() {
     scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
     
     // Luz puntual
-    scene.addLight(Light(Vector3(0.0f, 0.9f, -2.0f), Color(10.0f, 10.0f, 10.0f).toPixel()));
+    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
     std::cout << "Escena creada." << std::endl;
 

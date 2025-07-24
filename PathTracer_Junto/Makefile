@@ -10,26 +10,37 @@ TARGET = $(BINDIR)/pathtracer
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
+# Detectar sistema operativo
+ifeq ($(OS),Windows_NT)
+    RM = del /Q /S
+    RMDIR = rmdir /S /Q
+else
+    RM = rm -f
+    RMDIR = rm -rf
+endif
+
 # Regla principal
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $(OBJECTS) main.cpp -o $(TARGET)
 
-# Reglas para compilar los archivos .cpp a .o
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+# Regla para compilar archivos .cpp
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR) $(BINDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Crear directorios si no existen
+# Crear directorios si no existen (Windows-friendly)
 $(OBJDIR):
-	mkdir -p $(OBJDIR)
+	@if not exist $(OBJDIR) mkdir $(OBJDIR)
 
 $(BINDIR):
-	mkdir -p $(BINDIR)
+	@if not exist $(BINDIR) mkdir $(BINDIR)
 
 # Limpieza
 clean:
-	rm -rf $(OBJDIR) $(BINDIR)
+	-$(RM) $(OBJDIR)\*.o
+	-$(RMDIR) $(OBJDIR)
+	-$(RMDIR) $(BINDIR)
 
 # Phony targets
 .PHONY: all clean

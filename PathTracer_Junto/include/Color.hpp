@@ -1,5 +1,4 @@
-#ifndef COLOR_HPP
-#define COLOR_HPP
+#pragma once
 
 #include "Image.hpp"
 
@@ -21,9 +20,5 @@ public:
     Color operator/(float scalar) const;
 
     //Pasar a Pixel
-    Pixel toPixel() const {
-        return Pixel{R, G, B};
-    }
+    Pixel toPixel() const;
 };
-
-#endif // COLOR_HPP

@@ -46,5 +46,9 @@ Color Color::operator/(float scalar) const {
     return Color(R / scalar, G / scalar, B / scalar);
 }
 
+//Pasar a Pixel
+Pixel Color::toPixel() const {
+    return Pixel{R, G, B};
+}
 
 
