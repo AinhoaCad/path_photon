@@ -98,7 +98,7 @@ int main() {
     Scene CornellBoxBasica = createCornellBox();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); //Con este de momento no va
 
-    scene = CornellBoxLuzTecho; // Escena principal para renderizar
+    scene = CornellBoxBasica; // Escena principal para renderizar
     
     // Configurar la cámara
     Camera camera = CameraConfiguration();
