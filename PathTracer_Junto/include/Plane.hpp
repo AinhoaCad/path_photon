@@ -2,11 +2,15 @@
 
 #include "Material.hpp"
 #include "Primitive.hpp"
+#include "Light.hpp"
 
 class Plane : public Primitive {
 public:
-    // Constructor
-    Plane(const Vector3& normal, float d, const Material& material, bool emision);
+    // Constructor de plano sin emisión
+    Plane(const Vector3& normal, float d, const Material& material);
+
+    // Plano con luz de área
+    Plane(const Vector3& normal, float d, const Material& material, const Light& areaLight);
 
     // Métodos de intersección
     bool intersect(Ray& ray, float& t) const override;
@@ -19,16 +23,24 @@ public:
     Direction getPointNormal(Point p) const override;
 
     Material getMaterial() const override;
-    bool getEmision() const override;
+    
+
+    // Luz asociada
+    Light getAreaLight() const;
+    bool emitsLight() const; // devuelve true si el plano emite luz
 
     // Setters (compatibilidad)
     void setDistancia(float d);
     void setNormal(const Vector3& n);
     void setMaterial(const Material& material);
+    void setAreaLight(const Light& light);
 
 protected:
     Vector3 normal_;
     float d_;
     Material material_;
-    bool emision_;
+    
+
+    bool emision_ = false; // true si hay luz de área
+    Light areaLight_;      // solo válido si emision_ == true
 };

@@ -1,10 +1,14 @@
 #include "Plane.hpp"
 #include <cmath>
 
+// Constructor de plano sin emisión
+Plane::Plane(const Vector3& normal, float d, const Material& material)
+    : normal_(normal.normalized()), d_(d), material_(material), emision_(false) {}
 
-// Constructor
-Plane::Plane(const Vector3& normal, float d, const Material& material, bool emision)
-    : normal_(normal.normalized()), d_(d), material_(material), emision_(emision) {}
+// Constructor de plano con luz de área
+Plane::Plane(const Vector3& normal, float d, const Material& material, const Light& areaLight)
+    : normal_(normal.normalized()), d_(d), material_(material), areaLight_(areaLight), emision_(true) {}
+
 
 // Intersección rayo-plano
 bool Plane::intersect(Ray& ray, float& t) const {
@@ -43,10 +47,12 @@ Direction Plane::getPointNormal(Point p) const {
     return normal_;
 }
 
-
-bool Plane::getEmision() const {
-    return emision_;
+Light Plane::getAreaLight() const {
+    return areaLight_;
 }
+
+
+
 
 // Setters de compatibilidad
 void Plane::setDistancia(float d) {
@@ -59,5 +65,15 @@ void Plane::setNormal(const Vector3& n) {
 
 void Plane::setMaterial(const Material& material) {
     material_ = material;
+}
+
+void Plane::setAreaLight(const Light& light) {
+    areaLight_ = light;
+    emision_ = true;
+}
+
+// Nuevo método para comprobar si el plano emite luz
+bool Plane::emitsLight() const {
+    return emision_;
 }
 

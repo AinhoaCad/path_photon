@@ -8,19 +8,19 @@ Scene createCornellBox() {
     Scene scene;
 
     // Pared izquierda (rojo), x = -1
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));
 
     // Pared derecha (verde), x = 1
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse, false));
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
 
     // Suelo, y = -1
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse, false));
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse));
 
     // Techo, y = 1
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse, false));
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse));
 
     // Fondo, z = 1
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse, false));
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse));
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
@@ -39,26 +39,33 @@ Scene createCornellBoxLuzTecho() {
     Scene scene;
 
     // Pared izquierda (rojo), x = -1
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse, false));
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));
 
     // Pared derecha (verde), x = 1
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse, false));
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
 
     // Suelo, y = -1
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse, false));
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse));
 
     // Techo emitiendo luz
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse, true)); // Techo con emisión
-
+    // Techo como luz de área
+    
+    Light techoLight(
+        Point(0.0f, 1.0f, 0.0f),    // centro de la luz
+        Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
+        2.0f,                       // ancho
+        2.0f,                       // alto
+        Pixel{20.0f, 20.0f, 20.0f}  // intensidad/poder de la luz
+    );
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse, techoLight)); // Techo con emisión
+    //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLight
     // Fondo, z = 1
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse, false));
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse));
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
     scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
     
-    // Luz puntual
-    scene.addLight(Light(Vector3(0.5f, -1.5f, 0.5f), Color(1.5f, 1.5f, 1.5f).toPixel())); // Luz más intensa
 
     std::cout << "Escena del Cornell Box con techo emitiendo luz creada." << std::endl;
 
@@ -98,12 +105,11 @@ int main() {
     Scene CornellBoxBasica = createCornellBox();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); //Con este de momento no va
 
-    scene = CornellBoxLuzTecho; // Escena principal para renderizar
+    scene = CornellBoxBasica; // Escena principal para renderizar
     
     // Configurar la cámara
     Camera camera = CameraConfiguration();
 
-    /*
     
     //--------------------------------------------------------
     // IMAGEN 0: Primera imagen sin luz y un rayo por pixel
@@ -119,7 +125,6 @@ int main() {
     Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
     image1.writePPM("imagenMultiplesRayos.ppm");
 
-    */
 
     //--------------------------------------------------------
     // IMAGEN 2: Tercera imagen con luz y un rayo por pixel

@@ -6,6 +6,11 @@ void Scene::addSphere(const Sphere& sphere) {
 
 void Scene::addPlane(const Plane& plane) {
     planes.push_back(plane);
+
+    // Si el plano tiene luz asociada, añadirla también al vector de luces
+    if (plane.emitsLight()) {
+        lights.push_back(plane.getAreaLight());
+    }
 }
 
 void Scene::addLight(const Light& light) {

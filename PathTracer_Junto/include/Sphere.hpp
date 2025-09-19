@@ -20,7 +20,7 @@ public:
     Direction getPointNormal(Point p) const override;
 
     Material getMaterial() const override;
-    bool getEmision() const override;
+    bool getEmision() const;
 
     // Setters (compatibilidad)
     void setCentro(const Vector3& c);

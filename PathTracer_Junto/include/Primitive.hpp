@@ -13,7 +13,7 @@ public:
     virtual Material getMaterial() const = 0;
     virtual Direction getPointNormal(Point p) const = 0;
 
-    virtual bool getEmision() const = 0;
+    //virtual bool getEmision() const = 0;
     //virtual ~Primitive() {}
     
 };
