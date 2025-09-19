@@ -36,7 +36,12 @@ Pixel Light::BRDF(Pixel color) const {
 float Light::LambertianCos(Direction normal, Point p) const {
     Direction numerador = Operations::sub(origen, p);
     numerador = Operations::norm(numerador);
-    float coseno = fabs(Operations::dot(numerador, normal));
+    float coseno = (Operations::dot(numerador, normal));
+
+    //Si es menor que 0 devolvemos 0
+    if (coseno < 0) {
+        return 0.0f;
+    }   
     return coseno;
 }
 
