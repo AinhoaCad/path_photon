@@ -67,6 +67,10 @@ Direction Sphere::getPointNormal(Point p) const {
 bool Sphere::getEmision() const {
     return emision_;
 }
+//REVISAR ESTO
+bool Sphere::emitsLight() const {
+    return false;
+}
 
 // Setters de compatibilidad
 void Sphere::setCentro(const Vector3& c) {

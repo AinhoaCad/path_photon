@@ -48,6 +48,9 @@ public:
 
     // ----------- Métodos de área -----------
 
+    //Devuelve la radiancia rectangular (Le) a partir de nuestro power (en luz puntual radiancia equivale a power)
+    Pixel Light::calcularRadianciaRectangular() const;
+
     // Devuelve un punto aleatorio dentro del área rectangular
     Point samplePointOnArea(float xi1, float xi2) const;
 

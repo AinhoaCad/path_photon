@@ -27,7 +27,7 @@ public:
 
     // Luz asociada
     Light getAreaLight() const;
-    bool emitsLight() const; // devuelve true si el plano emite luz
+    bool emitsLight() const override; // devuelve true si el plano emite luz
 
     // Setters (compatibilidad)
     void setDistancia(float d);

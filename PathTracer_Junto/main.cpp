@@ -14,17 +14,17 @@ Scene createCornellBox() {
     scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
 
     // Suelo, y = -1
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse));
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));
 
     // Techo, y = 1
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse));
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse));
 
     // Fondo, z = 1
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse));
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, blueDiffuse, false));
     
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
@@ -45,7 +45,7 @@ Scene createCornellBoxLuzTecho() {
     scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
 
     // Suelo, y = -1
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, blueDiffuse));
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));
 
     // Techo emitiendo luz
     // Techo como luz de área
@@ -55,16 +55,16 @@ Scene createCornellBoxLuzTecho() {
         Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
         2.0f,                       // ancho
         2.0f,                       // alto
-        Pixel{20.0f, 20.0f, 20.0f}  // intensidad/poder de la luz
+        Pixel{1.0f, 1.0f, 1.0f}  // intensidad/poder de la luz
     );
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, blueDiffuse, techoLight)); // Techo con emisión
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLight
     // Fondo, z = 1
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, whiteDiffuse));
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, grayDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, blueDiffuse, false));
     
 
     std::cout << "Escena del Cornell Box con techo emitiendo luz creada." << std::endl;

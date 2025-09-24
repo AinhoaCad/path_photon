@@ -58,6 +58,18 @@ Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
 
 // ----------- Métodos de área rectangular -----------
 
+Pixel Light::calcularRadianciaRectangular() const {
+    // Si no es área, devolvemos la potencia directamente
+    if (width == 0 || height == 0) return power;
+
+    float area = width * height;
+    return Pixel{
+        power.r / (area * float(M_PI)),
+        power.g / (area * float(M_PI)),
+        power.b / (area * float(M_PI))
+    };
+}
+
 Point Light::samplePointOnArea(float xi1, float xi2) const {
     // Si no es área, devolvemos el origen
     if (width == 0 || height == 0) return origen;
@@ -85,19 +97,48 @@ Pixel Light::calcularIntensidadLuz(Point p, const Point& lightSample) const {
 
 
 Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const Point& lightSample) const {
-    Pixel intensidad = calcularIntensidadLuz(p, lightSample);
+    // ===============================
+    // 1️⃣ Radiancia emitida L_e
+    // ===============================
+    // Para luz rectangular Lambertiana:
+    // L_e = power / (área * π)
+    Pixel Le = radianciaRectangular(); // función que convierte power en radiancia
 
-    // Dirección desde el punto hacia la luz
-    Direction L = Operations::sub(lightSample, p);
-    L = Operations::norm(L);
+    // ===============================
+    // 2️⃣ Vector desde p hacia la muestra de la luz
+    // ===============================
+    Direction L = Operations::sub(lightSample, p);  // vector desde p hacia lightSample
+    float dist2 = Operations::dot(L, L);            // distancia al cuadrado |x-p|^2
+    L = Operations::norm(L);                        // dirección normalizada
 
-    float coseno = fabs(Operations::dot(L, normal));
+    // ===============================
+    // 3️⃣ Coseno en la superficie receptora
+    // ===============================
+    // θ_surface = ángulo entre normal de la superficie y dirección de la luz
+    float cosThetaSurface = Operations::dot(normalSurface, L);
+    if (cosThetaSurface <= 0.0f) return Pixel{0.0f, 0.0f, 0.0f}; // superficie orientada al revés
 
+    // ===============================
+    // 4️⃣ Coseno en la luz (orientación de la luz hacia el punto)
+    // ===============================
+    // θ_light = ángulo entre normal de la luz y dirección desde la luz hacia el punto
+    float cosThetaLight = Operations::dot(this->normal, Operations::mult(L, -1.0f));
+    if (cosThetaLight <= 0.0f) return Pixel{0.0f, 0.0f, 0.0f}; // luz mirando hacia atrás
+
+    // ===============================
+    // 5️⃣ Evaluación del BRDF
+    // ===============================
+    // fr(p, wi, wo) para superficie Lambertiana = albedo / π
     Pixel brdf = BRDF(color);
 
-    return Pixel{
-        intensidad.r * brdf.r * coseno,
-        intensidad.g * brdf.g * coseno,
-        intensidad.b * brdf.b * coseno
-    };
+    // ===============================
+    // 6️⃣ Contribución final de la muestra
+    // ===============================
+    // L_o(p) ≈ L_e * fr * cosThetaSurface * cosThetaLight / |x-p|^2
+    Pixel contrib;
+    contrib.r = Le.r * brdf.r * cosThetaSurface * cosThetaLight / dist2;
+    contrib.g = Le.g * brdf.g * cosThetaSurface * cosThetaLight / dist2;
+    contrib.b = Le.b * brdf.b * cosThetaSurface * cosThetaLight / dist2;
+
+    return contrib;
 }
