@@ -55,7 +55,7 @@ Scene createCornellBoxLuzTecho() {
         Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
         2.0f,                       // ancho
         2.0f,                       // alto
-        Pixel{1.0f, 1.0f, 1.0f}  // intensidad/poder de la luz
+        Pixel{40.0f, 40.0f, 40.0f}  // intensidad/poder de la luz aumentado
     );
     scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLight
@@ -105,7 +105,7 @@ int main() {
     Scene CornellBoxBasica = createCornellBox();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); //Con este de momento no va
 
-    scene = CornellBoxBasica; // Escena principal para renderizar
+    scene = CornellBoxLuzTecho; // Escena principal para renderizar
     
     // Configurar la cámara
     Camera camera = CameraConfiguration();

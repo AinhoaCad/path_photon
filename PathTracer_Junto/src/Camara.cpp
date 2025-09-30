@@ -4,6 +4,7 @@
 #include "Material.hpp"
 #include "Ray.hpp"
 #include "Light.hpp"
+#include "Plane.hpp"
 #include <ctime> // Para usar srand
 #include <cstdlib> // Para generar números aleatorios
 
@@ -152,6 +153,16 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
                 Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), mejorT));
                 Direction normal = closestPrimitive->getPointNormal(hitPoint);
 
+                // Si la superficie es emisiva, agregar su emisión
+                if (closestPrimitive->emitsLight()) {
+                    Plane* emissivePlane = static_cast<Plane*>(closestPrimitive);
+                    Light areaLight = emissivePlane->getAreaLight();
+                    Pixel emision = areaLight.calcularRadianciaRectangular();
+                    p.r += emision.r;
+                    p.g += emision.g;
+                    p.b += emision.b;
+                }
+
                 std::vector<bool> inShadow(numLights, false);
 
                 for (int l = 0; l < numLights; l++) {
@@ -191,10 +202,43 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
                 int numSombras = 0;
                 for (int l = 0; l < numLights; l++) {
                     if (!inShadow[l]) {
-                        Pixel iluminacion;
+                        Pixel iluminacion = {0, 0, 0};
                         if (lights[l].width > 0 && lights[l].height > 0) {
-                            // Luz de área
-                            iluminacion = lights[l].calcularLuzAreaSample(hitPoint, normal, p, lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX));
+                            // Luz de área - tomar múltiples muestras
+                            int numLightSamples = 16;
+                            Pixel totalIlum = {0, 0, 0};
+                            
+                            for (int ls = 0; ls < numLightSamples; ls++) {
+                                Point areaSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+                                
+                                // Verificar sombras para esta muestra específica
+                                Point areaShadowOrigin = Operations::add(hitPoint, Operations::mult(normal, 0.001f));
+                                Direction areaShadowDir = Operations::sub(areaSample, areaShadowOrigin);
+                                float areaDist = Operations::mod(areaShadowDir);
+                                areaShadowDir = Operations::norm(areaShadowDir);
+                                Ray areaShadowRay(areaShadowOrigin.toVector(), areaShadowDir.toVector());
+                                
+                                bool areaInShadow = false;
+                                for (int k = 0; k < static_cast<int>(primitives.size()); k++) {
+                                    float areaShadowT;
+                                    if (primitives[k]->intersect(areaShadowRay, areaShadowT) && areaShadowT > 0.001f && areaShadowT < areaDist) {
+                                        areaInShadow = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!areaInShadow) {
+                                    Pixel sampleIlum = lights[l].calcularLuzAreaSample(hitPoint, normal, p, areaSample);
+                                    totalIlum.r += sampleIlum.r;
+                                    totalIlum.g += sampleIlum.g;
+                                    totalIlum.b += sampleIlum.b;
+                                }
+                            }
+                            
+                            // Promediar las muestras
+                            iluminacion.r = totalIlum.r / numLightSamples;
+                            iluminacion.g = totalIlum.g / numLightSamples;
+                            iluminacion.b = totalIlum.b / numLightSamples;
                         } else {
                             // Luz puntual
                             iluminacion = lights[l].calcularLuz(hitPoint, normal, p);
@@ -251,6 +295,17 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
                 if (bestT > 0 && closestPrimitive != nullptr) {
                     Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
                     Direction normal = closestPrimitive->getPointNormal(hitPoint);
+                    
+                    // Si la superficie es emisiva, agregar su emisión
+                    if (closestPrimitive->emitsLight()) {
+                        Plane* emissivePlane = static_cast<Plane*>(closestPrimitive);
+                        Light areaLight = emissivePlane->getAreaLight();
+                        Pixel emision = areaLight.calcularRadianciaRectangular();
+                        color.r += emision.r;
+                        color.g += emision.g;
+                        color.b += emision.b;
+                    }
+                    
                     std::vector<bool> inShadow(lights.size(), false);
 
                     // Calcular sombras y contribución de cada luz
@@ -290,8 +345,40 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
                         if (!inShadow[l]) {
                             Pixel lightContribution;
                             if (lights[l].width > 0 && lights[l].height > 0) {
-                                // Luz de área
-                                lightContribution = lights[l].calcularLuzAreaSample(hitPoint, normal, colorPrimitive, lightSample);
+                                // Luz de área - tomar múltiples muestras
+                                int numLightSamples = 16; // Número de muestras de la luz de área
+                                Pixel totalContribution = {0, 0, 0};
+                                
+                                for (int ls = 0; ls < numLightSamples; ls++) {
+                                    Point areaSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+                                    
+                                    // Verificar sombras para esta muestra específica
+                                    Direction areaShadowDir = Operations::sub(areaSample, shadowOrigin);
+                                    float areaDist = Operations::mod(areaShadowDir);
+                                    areaShadowDir = Operations::norm(areaShadowDir);
+                                    Ray areaShadowRay(shadowOrigin.toVector(), areaShadowDir.toVector());
+                                    
+                                    bool areaInShadow = false;
+                                    for (size_t k = 0; k < primitives.size(); k++) {
+                                        float areaShadowT;
+                                        if (primitives[k]->intersect(areaShadowRay, areaShadowT) && areaShadowT > 0.001f && areaShadowT < areaDist) {
+                                            areaInShadow = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (!areaInShadow) {
+                                        Pixel sampleContrib = lights[l].calcularLuzAreaSample(hitPoint, normal, colorPrimitive, areaSample);
+                                        totalContribution.r += sampleContrib.r;
+                                        totalContribution.g += sampleContrib.g;
+                                        totalContribution.b += sampleContrib.b;
+                                    }
+                                }
+                                
+                                // Promediar las muestras
+                                lightContribution.r = totalContribution.r / numLightSamples;
+                                lightContribution.g = totalContribution.g / numLightSamples;
+                                lightContribution.b = totalContribution.b / numLightSamples;
                             } else {
                                 // Luz puntual
                                 lightContribution = lights[l].calcularLuz(hitPoint, normal, colorPrimitive);
@@ -444,6 +531,17 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
                 if (bestT > 0 && closestPrimitive != nullptr) {
                     Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
                     Direction normal = closestPrimitive->getPointNormal(hitPoint);
+                    
+                    // Si la superficie es emisiva, agregar su emisión
+                    if (closestPrimitive->emitsLight()) {
+                        Plane* emissivePlane = static_cast<Plane*>(closestPrimitive);
+                        Light areaLight = emissivePlane->getAreaLight();
+                        Pixel emision = areaLight.calcularRadianciaRectangular();
+                        color.r += emision.r;
+                        color.g += emision.g;
+                        color.b += emision.b;
+                    }
+                    
                     std::vector<bool> inShadow(lights.size(), false);
 
                     for (size_t l = 0; l < lights.size(); ++l) {

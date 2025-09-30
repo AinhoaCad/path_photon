@@ -76,8 +76,8 @@ Point Light::samplePointOnArea(float xi1, float xi2) const {
 
     // Creamos un sistema ortonormal con la normal
     Vector3 up = fabs(normal.y) < 0.999f ? Vector3(0,1,0) : Vector3(1,0,0);
-    Vector3 tangent = Operations::norm(Operations::cross(up, normal)).toVector();
-    Vector3 bitangent = Operations::cross(normal, tangent).toVector();
+    Vector3 tangent = Operations::norm(Operations::cross(normal, up)).toVector();
+    Vector3 bitangent = Operations::norm(Operations::cross(normal, tangent)).toVector();
 
     // Desplazamos con xi1, xi2 en [-0.5, 0.5]
     float dx = (xi1 - 0.5f) * width;
@@ -102,7 +102,7 @@ Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const
     // ===============================
     // Para luz rectangular Lambertiana:
     // L_e = power / (área * π)
-    Pixel Le = radianciaRectangular(); // función que convierte power en radiancia
+    Pixel Le = calcularRadianciaRectangular(); // función que convierte power en radiancia
 
     // ===============================
     // 2️⃣ Vector desde p hacia la muestra de la luz
@@ -115,14 +115,15 @@ Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const
     // 3️⃣ Coseno en la superficie receptora
     // ===============================
     // θ_surface = ángulo entre normal de la superficie y dirección de la luz
-    float cosThetaSurface = Operations::dot(normalSurface, L);
+    float cosThetaSurface = Operations::dot(normal, L);
     if (cosThetaSurface <= 0.0f) return Pixel{0.0f, 0.0f, 0.0f}; // superficie orientada al revés
 
     // ===============================
     // 4️⃣ Coseno en la luz (orientación de la luz hacia el punto)
     // ===============================
     // θ_light = ángulo entre normal de la luz y dirección desde la luz hacia el punto
-    float cosThetaLight = Operations::dot(this->normal, Operations::mult(L, -1.0f));
+    Direction lightToPoint = Operations::mult(L, -1.0f);
+    float cosThetaLight = Operations::dot(this->normal, lightToPoint);
     if (cosThetaLight <= 0.0f) return Pixel{0.0f, 0.0f, 0.0f}; // luz mirando hacia atrás
 
     // ===============================
