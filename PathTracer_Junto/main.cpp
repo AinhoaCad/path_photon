@@ -24,7 +24,7 @@ Scene createCornellBox() {
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, blueDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, cyanDiffuse, false));
     
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
@@ -64,7 +64,7 @@ Scene createCornellBoxLuzTecho() {
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, purpleDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, blueDiffuse, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, cyanDiffuse, false));
     
 
     std::cout << "Escena del Cornell Box con techo emitiendo luz creada." << std::endl;
@@ -149,7 +149,7 @@ int main() {
 
     //Modificaciones 
     image4.clampPixels();
-    image4.curvaGamma(0.5);
+    image4.curvaGamma(1/2.2);
 
     image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
 
@@ -163,7 +163,7 @@ int main() {
 
     //Modificaciones
     image5.clampPixels();
-    image5.curvaGamma(0.5);
+    image5.curvaGamma(1/2.2);
 
     image5.writePPM("imagenLuzRebotesModificaciones.ppm");
 

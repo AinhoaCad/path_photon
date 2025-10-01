@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Color.hpp"
+#include <algorithm>
 
 class Material {
 public:
@@ -23,10 +24,42 @@ public:
         }
     }
 
-    // DE MOMENTO SACAMOS EL COLOR DEL MATERIAL COMO EL COLOR DIFUSO PERO EN EL FUTURO SE PODRÍA HACER MÁS COMPLEJO
-    // USANDO POR EJEMPLO MEZCLA DE DIFUSO Y ESPECULAR 
+    // Obtener el color del material para visualización
     Pixel toPixel() const {
-        return kd.toPixel();  // Usa kd como color principal del material
+        // Combinar componentes difusa y especular para obtener un color representativo
+        Color combinedColor;
+        combinedColor.R = kd.R + ks.R * 0.3f; // Reducir contribución especular
+        combinedColor.G = kd.G + ks.G * 0.3f;
+        combinedColor.B = kd.B + ks.B * 0.3f;
+        
+        // Para materiales dieléctricos, añadir un tinte
+        if (kt.R > 0.1f || kt.G > 0.1f || kt.B > 0.1f) {
+            combinedColor.R = std::max(combinedColor.R, 0.2f);
+            combinedColor.G = std::max(combinedColor.G, 0.2f);
+            combinedColor.B = std::max(combinedColor.B, 0.3f); // Ligero tinte azul
+        }
+        
+        // Asegurar que no exceda 1.0
+        combinedColor.R = std::min(combinedColor.R, 1.0f);
+        combinedColor.G = std::min(combinedColor.G, 1.0f);
+        combinedColor.B = std::min(combinedColor.B, 1.0f);
+        
+        return combinedColor.toPixel();
+    }
+    
+    // Métodos para identificar tipo de material
+    bool isDiffuse() const {
+        return (kd.R > 0.01f || kd.G > 0.01f || kd.B > 0.01f) && 
+               (ks.R < 0.1f && ks.G < 0.1f && ks.B < 0.1f) &&
+               (kt.R < 0.1f && kt.G < 0.1f && kt.B < 0.1f);
+    }
+    
+    bool isSpecular() const {
+        return (ks.R > 0.1f || ks.G > 0.1f || ks.B > 0.1f);
+    }
+    
+    bool isDielectric() const {
+        return (kt.R > 0.1f || kt.G > 0.1f || kt.B > 0.1f);
     }
 };
 
@@ -38,6 +71,7 @@ extern Material redDiffuse;
 extern Material greenDiffuse;
 extern Material blueDiffuse;
 extern Material purpleDiffuse;
+extern Material cyanDiffuse;
 extern Material grayDiffuse;
 extern Material mirrorSpecular;
 extern Material glassDielectric;

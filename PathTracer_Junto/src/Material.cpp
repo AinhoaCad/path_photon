@@ -7,7 +7,8 @@
     Color red(1.0f, 0.0f, 0.0f);
     Color green(0.0f, 1.0f, 0.0f);
     Color blue(0.0f, 0.0f, 1.0f);
-    Color purple(0.5f, 0.0f, 0.5f);
+    Color cyan(0.5f, 0.9f, 0.9f);
+    Color purple(0.8f, 0.6f, 0.9f);
     Color gray(0.5f, 0.5f, 0.5f);
 
     // Materiales difusos básicos
@@ -16,6 +17,7 @@
     Material greenDiffuse  = Material(green, black, black, black, 1.0f);
     Material blueDiffuse   = Material(blue,  black, black, black, 1.0f);
     Material purpleDiffuse = Material(purple, black, black, black, 1.0f);
+    Material cyanDiffuse = Material(cyan, black, black, black, 1.0f);
     Material grayDiffuse   = Material(gray, black, black, black, 1.0f);
 
     // Material espejo

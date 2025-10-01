@@ -488,9 +488,10 @@ Pixel calcularReboteIndirecto(
     Pixel colorRebote = calcularReboteIndirecto(newHit, newNormal, primitives, lights, depth + 1, maxBounces);
 
     Pixel total;
-    total.r = colorDirecto.r + colorRebote.r * 0.5f;
-    total.g = colorDirecto.g + colorRebote.g * 0.5f;
-    total.b = colorDirecto.b + colorRebote.b * 0.5f;
+    // Reducir el factor de rebotes para evitar color bleeding excesivo
+    total.r = colorDirecto.r + colorRebote.r * 0.2f;
+    total.g = colorDirecto.g + colorRebote.g * 0.2f;
+    total.b = colorDirecto.b + colorRebote.b * 0.2f;
 
     return total;
 }
