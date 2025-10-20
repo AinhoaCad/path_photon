@@ -1,5 +1,7 @@
 #define _USE_MATH_DEFINES
 #include "Light.hpp"
+#include "Material.hpp"
+
 
 //POr defecto
 Light::Light(){}
@@ -55,6 +57,60 @@ Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
         (intensidad.b * brdf.b * coseno)
     };
 }
+
+Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material, const Direction& wi, const Direction& wo) const {
+    // Si el material es emisor, devuelve su emisión directamente
+    if (material.Le.R > 0 || material.Le.G > 0 || material.Le.B > 0) {
+        return material.Le.toPixel();
+    }
+
+    // Intensidad de la luz (inversa cuadrada)
+    Pixel intensidad = calcularIntensidadLuz(p);
+
+    // Coseno entre normal y dirección de luz
+    float coseno = LambertianCos(normal, p);
+
+    // ---- Componente difusa (Lambertiana) ----
+    Pixel brdf_difusa = {
+        material.kd.R / float(M_PI),
+        material.kd.G / float(M_PI),
+        material.kd.B / float(M_PI)
+    };
+
+    // ---- Componente especular perfecta ----
+    // Reflección perfecta ωr = reflect(-wi, n)
+    Direction reflected = Operations::reflect(Operations::mult(wi, -1.0f), normal);
+    float specFactor = std::max(0.0f, Operations::dot(reflected, wo));
+    Pixel brdf_especular = {
+        material.ks.R * specFactor,
+        material.ks.G * specFactor,
+        material.ks.B * specFactor
+    };
+
+    // ---- Componente transmisiva (refracción perfecta) ----
+    Pixel brdf_transmisiva = {0, 0, 0};
+    if (material.kt.R > 0 || material.kt.G > 0 || material.kt.B > 0) {
+        Direction refracted;
+        bool ok = Operations::refract(Operations::mult(wi, -1.0f), normal, material.ior, refracted);
+        if (ok) {
+            float transFactor = std::max(0.0f, Operations::dot(refracted, wo));
+            brdf_transmisiva = {
+                material.kt.R * transFactor,
+                material.kt.G * transFactor,
+                material.kt.B * transFactor
+            };
+        }
+    }
+
+    // ---- Sumar las tres contribuciones ponderadas ----
+    Pixel total;
+    total.r = intensidad.r * coseno * (brdf_difusa.r + brdf_especular.r + brdf_transmisiva.r);
+    total.g = intensidad.g * coseno * (brdf_difusa.g + brdf_especular.g + brdf_transmisiva.g);
+    total.b = intensidad.b * coseno * (brdf_difusa.b + brdf_especular.b + brdf_transmisiva.b);
+
+    return total;
+}
+
 
 // ----------- Métodos de área rectangular -----------
 

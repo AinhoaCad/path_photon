@@ -40,7 +40,7 @@ Ray Camera::generateRay(int i, int j, std::string n) {
     }
     // El punto en el plano de la imagen en coordenadas de la cámara
     Direction rayDirection = Direction(pixelCenterX, pixelCenterY, 1);
-    Operations::norm(rayDirection); // Aseguramos que el vector esté normalizado
+    rayDirection = Operations::norm(rayDirection); // Aseguramos que el vector esté normalizado
     
     std::vector<Matrix> matrices = {left.getHomMatrix(), up.getHomMatrix(), forward.getHomMatrix(), origen.getHomMatrix()};
     Matrix m(matrices); // Creamos la matriz de cambio de base al sistema global
@@ -412,6 +412,8 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
 Pixel calcularReboteIndirecto(
     const Point& origen,
     const Direction& normal,
+    const Material& material,
+    const Direction& wo,
     const std::vector<Primitive*>& primitives,
     const std::vector<Light>& lights,
     int depth,
@@ -419,31 +421,10 @@ Pixel calcularReboteIndirecto(
 ) {
     if (depth >= maxBounces) return {0, 0, 0};
 
-    Direction dirRebote = Operations::randomHemisphereDirection(normal);
-    Point newOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-    Ray bouncedRay(newOrigin.toVector(), dirRebote.toVector());
-
-    float t = -1;
-    float bestT = -1;
-    Primitive* closest = nullptr;
-    Pixel baseColor = {0, 0, 0};
-
-    for (auto& prim : primitives) {
-        if (prim->intersect(bouncedRay, t) && (t < bestT || bestT < 0) && t > 0) {
-            bestT = t;
-            closest = prim;
-            baseColor = prim->getMaterial().toPixel();
-        }
-    }
-
-    if (!closest) return {0, 0, 0};
-
-    Point newHit = Operations::add(bouncedRay.origin_.toPoint(), Operations::mult(bouncedRay.direction_.toDirection(), bestT));
-    Direction newNormal = closest->getPointNormal(newHit);
-
+    // ------------------ Iluminación directa en este punto ------------------
     Pixel colorDirecto = {0, 0, 0};
     for (size_t l = 0; l < lights.size(); ++l) {
-        Point shadowOrigin = Operations::add(newHit, Operations::mult(newNormal, 0.001f));
+        Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
         Point lightSample;
         Direction toLight;
         float dist;
@@ -473,11 +454,13 @@ Pixel calcularReboteIndirecto(
         }
 
         if (!inShadow) {
-            Pixel contrib;
+            Pixel contrib = {0,0,0};
             if (lights[l].width > 0 && lights[l].height > 0) {
-                contrib = lights[l].calcularLuzAreaSample(newHit, newNormal, baseColor, lightSample);
+                // Luz de área: usamos calcularLuzAreaSample pasando el color del material
+                contrib = lights[l].calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample);
             } else {
-                contrib = lights[l].calcularLuz(newHit, newNormal, baseColor);
+                // Luz puntual: podemos usar la evaluación BSDF que maneja ks/kt
+                contrib = lights[l].calcularLuzBSDF(origen, normal, material, toLight, wo);
             }
             colorDirecto.r += contrib.r;
             colorDirecto.g += contrib.g;
@@ -485,13 +468,82 @@ Pixel calcularReboteIndirecto(
         }
     }
 
-    Pixel colorRebote = calcularReboteIndirecto(newHit, newNormal, primitives, lights, depth + 1, maxBounces);
+    // ------------------ Muestreo para rebote indirecto ------------------
+    // Decide tipo de rebote según el material
+    Direction nextDir;
+    Color weight = material.kd; // por defecto difuso
+    bool isDelta = false;
+
+    if (material.isSpecular()) {
+        // Reflexión perfecta
+        Direction incident = Operations::mult(wo, -1.0f);
+        nextDir = Operations::reflect(incident, normal);
+        isDelta = true;
+        weight = material.ks;
+    } else if (material.isDielectric()) {
+        // Intentar refractar, si hay TIR se refleja
+        Direction incident = Operations::mult(wo, -1.0f);
+        float cosTheta = Operations::dot(incident, normal);
+        float eta = (cosTheta > 0.0f) ? (1.0f / material.ior) : material.ior;
+        Direction refracted;
+        bool ok = Operations::refract(incident, normal, eta, refracted);
+        if (ok) {
+            nextDir = refracted;
+            isDelta = true;
+            weight = material.kt;
+        } else {
+            // TIR -> reflexión
+            nextDir = Operations::reflect(incident, normal);
+            isDelta = true;
+            weight = material.ks;
+        }
+    } else {
+        // Difuso: muestreo hemisférico
+        nextDir = Operations::randomHemisphereDirection(normal);
+        isDelta = false;
+        weight = material.kd;
+    }
+
+    // Traza el rayo de rebote
+    Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
+    Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
+
+    float t = -1;
+    float bestT = -1;
+    Primitive* closest = nullptr;
+
+    for (auto& prim : primitives) {
+        if (prim->intersect(nextRay, t) && (t < bestT || bestT < 0) && t > 0) {
+            bestT = t;
+            closest = prim;
+        }
+    }
+
+    Pixel indirect = {0,0,0};
+    if (closest) {
+        Point hit = Operations::add(nextRay.origin_.toPoint(), Operations::mult(nextRay.direction_.toDirection(), bestT));
+        Direction hitNormal = closest->getPointNormal(hit);
+        Material hitMaterial = closest->getMaterial();
+        // Recursión: la nueva wo es opuesto a la dirección del rayo que llega al hit
+        Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
+        Pixel rec = calcularReboteIndirecto(hit, hitNormal, hitMaterial, newWo, primitives, lights, depth + 1, maxBounces);
+
+        // Modula por el peso del material (kd/ks/kt) por componente
+        indirect.r = rec.r * weight.R;
+        indirect.g = rec.g * weight.G;
+        indirect.b = rec.b * weight.B;
+        // Reducir la magnitud de los rebotes difusos para evitar bleeding excesivo
+        if (!isDelta) {
+            indirect.r *= 0.2f;
+            indirect.g *= 0.2f;
+            indirect.b *= 0.2f;
+        }
+    }
 
     Pixel total;
-    // Reducir el factor de rebotes para evitar color bleeding excesivo
-    total.r = colorDirecto.r + colorRebote.r * 0.2f;
-    total.g = colorDirecto.g + colorRebote.g * 0.2f;
-    total.b = colorDirecto.b + colorRebote.b * 0.2f;
+    total.r = colorDirecto.r + indirect.r;
+    total.g = colorDirecto.g + indirect.g;
+    total.b = colorDirecto.b + indirect.b;
 
     return total;
 }
@@ -586,7 +638,10 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
                         }
                     }
 
-                    Pixel indirect = calcularReboteIndirecto(hitPoint, normal, primitives, lights, 0, maxBounces);
+                    // Preparar material y dirección saliente (wo) para el muestreo de rebote
+                    Material hitMat = closestPrimitive->getMaterial();
+                    Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+                    Pixel indirect = calcularReboteIndirecto(hitPoint, normal, hitMat, wo, primitives, lights, 0, maxBounces);
                     color.r += indirect.r;
                     color.g += indirect.g;
                     color.b += indirect.b;

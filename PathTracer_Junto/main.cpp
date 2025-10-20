@@ -72,6 +72,44 @@ Scene createCornellBoxLuzTecho() {
     return scene;
 }
 
+Scene createCornellBoxMaterialesRaros() {
+    Scene scene;
+
+    // Pared izquierda (rojo), x = -1
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));
+
+    // Pared derecha (verde), x = 1
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
+
+    // Suelo, y = -1
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));
+
+    Light techoLight(
+        Point(0.0f, 1.0f, 0.0f),    // centro de la luz
+        Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
+        2.0f,                       // ancho
+        2.0f,                       // alto
+        Pixel{5.0f, 2.0f, 5.0f}  // intensidad para el neon
+    );
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, neonEmissive, techoLight)); // Techo con emisión
+    //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLigh
+
+    // Fondo, z = 1
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));
+
+    // Esferas
+    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, mirrorSpecular, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, shinyGold, false));
+    
+    // Luz puntual
+    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+    std::cout << "Escena del Cornell Box creada." << std::endl;
+
+    return scene;
+}
+
+
 
 Camera CameraConfiguration() {
 
@@ -103,10 +141,11 @@ int main() {
 
     // Crea y ajusta la escena
     Scene CornellBoxBasica = createCornellBox();
-    Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); //Con este de momento no va
+    Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
+    Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
 
-    scene = CornellBoxLuzTecho; // Escena principal para renderizar
-    
+    scene = CornellBoxMaterialesRaros; // Escena principal para renderizar (4 esferas con materiales nuevos)
+
     // Configurar la cámara
     Camera camera = CameraConfiguration();
 

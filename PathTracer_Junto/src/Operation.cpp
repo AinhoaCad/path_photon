@@ -60,6 +60,19 @@ Direction Operations::reflect(Direction incident, Direction normal) {
     float dotProduct = Operations::dot(incident, normal);
     return Operations::sub(incident, Operations::mult(normal, 2 * dotProduct));
 }
+
+bool Operations::refract(const Direction& incident, const Direction& normal, float eta, Direction& out) {
+    // Convert Direction -> Vector3 for using Vector3::refract
+    Vector3 iVec = incident.toVector();
+    Vector3 nVec = normal.toVector();
+    Vector3 r = iVec.refract(nVec, eta);
+    // Vector3::refract returns (0,0,0) when TIR occurs in that implementation
+    if (r.x == 0 && r.y == 0 && r.z == 0) {
+        return false;
+    }
+    out = r.toDirection();
+    return true;
+}
 void Operations::show(Point p) {
     std::cout << p << std::endl;
 }

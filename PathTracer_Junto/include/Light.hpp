@@ -5,6 +5,7 @@
 #include "Operations.hpp"
 #include "Vector3.hpp"
 #include <cmath>
+#include "Material.hpp"
 
 class Light {
 public:
@@ -44,6 +45,7 @@ public:
     // Luz total recibida en un punto p con normal y color dados
     Pixel calcularLuz(Point p, Direction normal, Pixel color) const;
 
+    Pixel calcularLuzBSDF(Point p, Direction normal, const Material& material, const Direction& wi, const Direction& wo) const;
 
 
     // ----------- Métodos de área -----------

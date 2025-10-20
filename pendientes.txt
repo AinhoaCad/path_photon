@@ -1,0 +1,22 @@
+
+
+----MIRAR LO DE QUE EN LA LUZ EN AREA EN VEZ DE SAMPLEAR MULTIPLES PUNTOS EN CADA RAYO HAGA SIMPLEMENTE MAS RAYOS
+
+----LOS COLORES ESPECIALES NO VAN, MIRAR COMO PODEMOS HACER
+
+
+pdf
+----pelota izquierda 0.8 0.6 0.9
+-----pelota cyan    0.5 0.9 0.9
+-----gamma 1/2.2
+
+
+path tracer
+---NUMERO DE MUESTRAS POR PIXEL COMO PARAMETRO DE TECLADO
+---Los parámetros de la imagen de salida también se indicarán por línea de comandos: ancho,
+alto y nombre de archivo.
+
+
+
+
+ENCAPSULAR!!!!

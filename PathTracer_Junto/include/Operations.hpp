@@ -40,6 +40,9 @@ public:
 
     //REFLEJAR
     static Direction reflect(Direction d1, Direction d2);
+    // Refract: intenta refractar 'incident' respecto a 'normal' con cociente eta (ni/nt)
+    // Devuelve true si no hay TIR y escribe el vector refractado en 'out'.
+    static bool refract(const Direction& incident, const Direction& normal, float eta, Direction& out);
     // MOSTRAR POR PANTALLA
     static void show(Point p);
     static void show(Direction d);
