@@ -422,49 +422,56 @@ Pixel calcularReboteIndirecto(
     if (depth >= maxBounces) return {0, 0, 0};
 
     // ------------------ Iluminación directa en este punto ------------------
+    // Para materiales con lóbulo delta (especular o dieléctrico) la contribución directa
+    // desde fuentes de área (como el techo) no debe contarse aquí, porque esos materiales
+    // son muestreados como delta (reflejan/refractan en una dirección puntual).
+    // Por tanto evitamos sumar iluminación directa cuando el material es delta.
     Pixel colorDirecto = {0, 0, 0};
-    for (size_t l = 0; l < lights.size(); ++l) {
-        Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-        Point lightSample;
-        Direction toLight;
-        float dist;
+    bool isDeltaMaterial = material.isSpecular() || material.isDielectric();
+    if (!isDeltaMaterial) {
+        for (size_t l = 0; l < lights.size(); ++l) {
+            Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
+            Point lightSample;
+            Direction toLight;
+            float dist;
 
-        // Distinguir luz de área de luz puntual
-        if (lights[l].width > 0 && lights[l].height > 0) {
-            lightSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
-            toLight = Operations::sub(lightSample, shadowOrigin);
-            dist = Operations::mod(toLight);
-            toLight = Operations::norm(toLight);
-        } else {
-            lightSample = lights[l].origen;
-            toLight = Operations::sub(lightSample, shadowOrigin);
-            dist = Operations::mod(toLight);
-            toLight = Operations::norm(toLight);
-        }
-
-        Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
-        bool inShadow = false;
-
-        for (auto& prim : primitives) {
-            float shadowT;
-            if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
-                inShadow = true;
-                break;
-            }
-        }
-
-        if (!inShadow) {
-            Pixel contrib = {0,0,0};
+            // Distinguir luz de área de luz puntual
             if (lights[l].width > 0 && lights[l].height > 0) {
-                // Luz de área: usamos calcularLuzAreaSample pasando el color del material
-                contrib = lights[l].calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample);
+                lightSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+                toLight = Operations::sub(lightSample, shadowOrigin);
+                dist = Operations::mod(toLight);
+                toLight = Operations::norm(toLight);
             } else {
-                // Luz puntual: podemos usar la evaluación BSDF que maneja ks/kt
-                contrib = lights[l].calcularLuzBSDF(origen, normal, material, toLight, wo);
+                lightSample = lights[l].origen;
+                toLight = Operations::sub(lightSample, shadowOrigin);
+                dist = Operations::mod(toLight);
+                toLight = Operations::norm(toLight);
             }
-            colorDirecto.r += contrib.r;
-            colorDirecto.g += contrib.g;
-            colorDirecto.b += contrib.b;
+
+            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
+            bool inShadow = false;
+
+            for (auto& prim : primitives) {
+                float shadowT;
+                if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
+                    inShadow = true;
+                    break;
+                }
+            }
+
+            if (!inShadow) {
+                Pixel contrib = {0,0,0};
+                if (lights[l].width > 0 && lights[l].height > 0) {
+                    // Luz de área: usamos calcularLuzAreaSample pasando el color del material
+                    contrib = lights[l].calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample);
+                } else {
+                    // Luz puntual: podemos usar la evaluación BSDF que maneja ks/kt
+                    contrib = lights[l].calcularLuzBSDF(origen, normal, material, toLight, wo);
+                }
+                colorDirecto.r += contrib.r;
+                colorDirecto.g += contrib.g;
+                colorDirecto.b += contrib.b;
+            }
         }
     }
 
