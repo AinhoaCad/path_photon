@@ -110,3 +110,27 @@ Direction Operations::randomHemisphereDirection(const Direction& normal) {
 
     return Operations::norm(world);
 }
+
+float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
+    // Usamos la ecuación de Fresnel no polarizada (reflectancia) - fórmula completa
+    // Clamp cosThetaI
+    cosThetaI = std::max(-1.0f, std::min(1.0f, cosThetaI));
+    // Si el cosThetaI es negativo, intercambiamos medios
+    bool entering = cosThetaI > 0.0f;
+    float ei = etaI;
+    float et = etaT;
+    float cosI = fabs(cosThetaI);
+
+    // Calcular sinT usando la ley de Snell
+    float sinT2 = (ei / et) * (ei / et) * (1.0f - cosI * cosI);
+    if (sinT2 > 1.0f) {
+        // TIR -> reflectancia = 1
+        return 1.0f;
+    }
+    float cosT = std::sqrt(std::max(0.0f, 1.0f - sinT2));
+
+    float rOrth = ((et * cosI) - (ei * cosT)) / ((et * cosI) + (ei * cosT));
+    float rPar = ((ei * cosI) - (et * cosT)) / ((ei * cosI) + (et * cosT));
+    float R = (rOrth * rOrth + rPar * rPar) * 0.5f;
+    return R;
+}

@@ -16,7 +16,7 @@ path tracer
 ---Los parámetros de la imagen de salida también se indicarán por línea de comandos: ancho,
 alto y nombre de archivo.
 
-
+FORMULAS  ESPEJO Y DEMÁS AÑADIDOS
 
 
 ENCAPSULAR!!!!

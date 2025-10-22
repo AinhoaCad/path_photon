@@ -87,10 +87,9 @@ static Material makeGlassDielectric() {
 
 static Material makePlasticMaterial() {
     // Plástico básico: difuso azul + pequeño brillo especular (no delta)
-    // Según apuntes: "blue diffuse + specular" — la especularidad se mantiene baja
     // Ligeramente más claro y con brillo un poco mayor (pero <0.1 para no activar "isSpecular")
     Color kd(0.35f, 0.55f, 0.95f); // azul claro tipo botella de agua
-    Color ks(0.09f, 0.09f, 0.09f); // brillo especular más visible pero no espejo
+    Color ks(0.2f, 0.2f, 0.2f); // brillo especular más visible pero no espejo
     Color kt = black;
     Color Le = black;
     float ior = 1.0f;

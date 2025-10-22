@@ -488,21 +488,42 @@ Pixel calcularReboteIndirecto(
         isDelta = true;
         weight = material.ks;
     } else if (material.isDielectric()) {
-        // Intentar refractar, si hay TIR se refleja
+        // Dielectric: usar Fresnel para mezclar entre reflexión y refracción
         Direction incident = Operations::mult(wo, -1.0f);
-        float cosTheta = Operations::dot(incident, normal);
-        float eta = (cosTheta > 0.0f) ? (1.0f / material.ior) : material.ior;
+        float cosThetaI = Operations::dot(incident, normal);
+        // Definir etaI, etaT según orientación
+        float etaI = 1.0f; // aire
+        float etaT = material.ior;
+        if (cosThetaI < 0.0f) {
+            // saliendo del material: swap
+            cosThetaI = -cosThetaI;
+            etaI = material.ior;
+            etaT = 1.0f;
+        }
+        float reflectance = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
+
+        // Intentar refractar
+        float eta = etaI / etaT;
         Direction refracted;
-        bool ok = Operations::refract(incident, normal, eta, refracted);
-        if (ok) {
-            nextDir = refracted;
-            isDelta = true;
-            weight = material.kt;
-        } else {
-            // TIR -> reflexión
+        bool canRefract = Operations::refract(incident, normal, eta, refracted);
+
+        // Probabilistic choice (Russian roulette-like) between reflection and transmission
+        float xi = static_cast<float>(rand()) / RAND_MAX;
+        if (!canRefract) {
+            // TIR -> reflect
             nextDir = Operations::reflect(incident, normal);
             isDelta = true;
             weight = material.ks;
+        } else if (xi < reflectance) {
+            // reflect
+            nextDir = Operations::reflect(incident, normal);
+            isDelta = true;
+            weight = material.ks; // reflection uses ks
+        } else {
+            // transmit
+            nextDir = refracted;
+            isDelta = true;
+            weight = material.kt; // transmission uses kt
         }
     } else {
         // Difuso: muestreo hemisférico
