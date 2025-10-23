@@ -74,11 +74,23 @@ Vector3 Vector3::abs() const {
     return Vector3(std::fabs(x), std::fabs(y), std::fabs(z));
 }
 Vector3 Vector3::refract(const Vector3& normal, float eta) const {
-    float cosI = -this->dotProduct(normal);
-    float sinT2 = eta * eta * (1.0f - cosI * cosI);
-    if (sinT2 > 1.0f) return Vector3(0, 0, 0);
-    float cosT = std::sqrt(1.0f - sinT2);
-    return (*this) * eta + normal * (eta * cosI - cosT);
+    // Based on the common refract implementation that handles entering/exiting
+    Vector3 N = normal;
+    float cosI = -this->dotProduct(N);
+    float etaRatio = eta; // eta is expected to be ni/nt from the caller
+
+    // If cosI < 0, the incident vector is coming from the other side -> flip
+    if (cosI < 0.0f) {
+        cosI = -cosI;
+        N = N * -1.0f;
+        // invert eta ratio when flipping (now ni/nt becomes nt/ni)
+        if (etaRatio != 0.0f) etaRatio = 1.0f / etaRatio;
+    }
+
+    float sinT2 = etaRatio * etaRatio * (1.0f - cosI * cosI);
+    if (sinT2 > 1.0f) return Vector3(0, 0, 0); // Total internal reflection
+    float cosT = std::sqrt(std::max(0.0f, 1.0f - sinT2));
+    return (*this) * etaRatio + N * (etaRatio * cosI - cosT);
 }
 
 // Funciones utilitarias

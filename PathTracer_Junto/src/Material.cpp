@@ -78,8 +78,9 @@ static Material makeMirrorSpecular() {
 
 static Material makeGlassDielectric() {
     Color kd = black;
-    Color ks(0.04f, 0.04f, 0.04f);
-    Color kt(0.96f, 0.96f, 0.96f);
+    Color ks = black;
+    // Transmission close to white (clear glass)
+    Color kt(1.0f, 1.0f, 1.0f);
     Color Le = black;
     normalizeColors(kd, ks, kt);
     return Material(kd, ks, kt, Le, 1.5f);

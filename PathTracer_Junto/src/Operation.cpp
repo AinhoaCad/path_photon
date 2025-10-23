@@ -4,7 +4,7 @@
 #include <cmath>  // Para usar sqrt
 #include "Operations.hpp"
 
-// Implementación de las funciones
+
 Point Operations::add(Point p, Direction d) {
     return Point(p.getX() + d.getX(), p.getY() + d.getY(), p.getZ() + d.getZ());
 }

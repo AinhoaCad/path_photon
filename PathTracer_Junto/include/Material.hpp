@@ -39,17 +39,15 @@ public:
     
     // Métodos para identificar tipo de material
     bool isDiffuse() const {
-        return (kd.R > 0.01f || kd.G > 0.01f || kd.B > 0.01f) && 
-               (ks.R < 0.1f && ks.G < 0.1f && ks.B < 0.1f) &&
-               (kt.R < 0.1f && kt.G < 0.1f && kt.B < 0.1f);
+        return (kd.R > 0.0f || kd.G > 0.0f || kd.B > 0.0f);
     }
     
     bool isSpecular() const {
-        return (ks.R > 0.1f || ks.G > 0.1f || ks.B > 0.1f);
+        return (ks.R > 0.0f || ks.G > 0.0f || ks.B > 0.0f);
     }
     
     bool isDielectric() const {
-        return (kt.R > 0.1f || kt.G > 0.1f || kt.B > 0.1f);
+        return (kt.R > 0.0f || kt.G > 0.0f || kt.B > 0.0f);
     }
 };
 

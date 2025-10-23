@@ -98,8 +98,8 @@ Scene createCornellBoxMaterialesRaros() {
     scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));
 
     // Esferas
-    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, plasticMaterial, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, plasticMaterial, false));
+    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, glassDielectric, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, glassDielectric, false));
     
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
@@ -154,43 +154,43 @@ int main() {
     // IMAGEN 0: Primera imagen sin luz y un rayo por pixel
     //------------------------------------------------------ 
 
-    Image image0 = camera.generateImage(scene.getPrimitives());
-    image0.writePPM("imagen1Rayo.ppm");
+    //Image image0 = camera.generateImage(scene.getPrimitives());
+    //image0.writePPM("imagen1Rayo.ppm");
 
     //--------------------------------------------------------
     // IMAGEN 1: Segunda imagen con múltiples rayos por pixel
     //------------------------------------------------------
 
-    Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
-    image1.writePPM("imagenMultiplesRayos.ppm");
+    //Image image1 = camera.generateImageMultipleRays(scene.getPrimitives(),numRays);
+    //image1.writePPM("imagenMultiplesRayos.ppm");
 
 
     //--------------------------------------------------------
     // IMAGEN 2: Tercera imagen con luz y un rayo por pixel
     //------------------------------------------------------
 
-    Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
-    image2.writePPM("imagenLuz1Rayo.ppm");
+    //Image image2 = camera.generateImageWithLightingOneRay(scene.getPrimitives(), scene.getLights());
+    //image2.writePPM("imagenLuz1Rayo.ppm");
 
 
     //--------------------------------------------------------
     // IMAGEN 3: Cuarta imagen con luz y múltiples rayos por pixel
     //------------------------------------------------------
 
-    Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
-    image3.writePPM("imagenLuzMultiplesRayos.ppm");
+    //Image image3 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
+    //image3.writePPM("imagenLuzMultiplesRayos.ppm");
 
     //--------------------------------------------------------
     // IMAGEN 4: Quinta imagen con luz, múltiples rayos y modificaciones
     //------------------------------------------------------
 
-    Image image4 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
+    //Image image4 = camera.generateImageWithLightingMultipleRays(scene.getPrimitives(), scene.getLights(), numRays);
 
     //Modificaciones 
-    image4.clampPixels();
-    image4.curvaGamma(1/2.2);
+    //image4.clampPixels();
+    //image4.curvaGamma(1/2.2);
 
-    image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
+    //image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
 
 
 

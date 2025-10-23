@@ -90,14 +90,33 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
     // ---- Componente transmisiva (refracción perfecta) ----
     Pixel brdf_transmisiva = {0, 0, 0};
     if (material.kt.R > 0 || material.kt.G > 0 || material.kt.B > 0) {
+        Direction incident = Operations::mult(wi, -1.0f);
+        float cosTheta = Operations::dot(incident, normal);
+        float etaI = 1.0f, etaT = material.ior;
+        if (cosTheta > 0.0f) {
+            // saliendo del material
+            etaI = material.ior;
+            etaT = 1.0f;
+        } else {
+            cosTheta = -cosTheta;
+            etaI = 1.0f;
+            etaT = material.ior;
+        }
+        float R = Operations::fresnelDielectric(cosTheta, etaI, etaT);
+        float T = 1.0f - R;
+        float eta = etaI / etaT; // ni/nt
         Direction refracted;
-        bool ok = Operations::refract(Operations::mult(wi, -1.0f), normal, material.ior, refracted);
-        if (ok) {
-            float transFactor = std::max(0.0f, Operations::dot(refracted, wo));
+        bool ok = Operations::refract(incident, normal, eta, refracted);
+        if (ok && T > 0.0f) {
+            // Compute abs cos between transmitted direction and surface normal
+            float absCos = std::fabs(Operations::dot(refracted, normal));
+            if (absCos < 1e-6f) absCos = 1e-6f;
+            // PBRT: ft = T / absCos, and when transporting radiance we must divide by eta^2
+            float factor = (T / absCos) / (eta * eta);
             brdf_transmisiva = {
-                material.kt.R * transFactor,
-                material.kt.G * transFactor,
-                material.kt.B * transFactor
+                material.kt.R * factor,
+                material.kt.G * factor,
+                material.kt.B * factor
             };
         }
     }

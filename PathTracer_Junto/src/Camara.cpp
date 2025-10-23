@@ -494,36 +494,68 @@ Pixel calcularReboteIndirecto(
         // Definir etaI, etaT según orientación
         float etaI = 1.0f; // aire
         float etaT = material.ior;
-        if (cosThetaI < 0.0f) {
+        // Si cosThetaI > 0 significa que el vector incidente y la normal apuntan en la misma
+        // dirección: el rayo viene desde el interior -> estamos saliendo del material.
+        if (cosThetaI > 0.0f) {
             // saliendo del material: swap
-            cosThetaI = -cosThetaI;
+            // para Fresnel usamos el coseno absoluto
+            // y para Snell intercambiamos etaI/etaT
+            // conservamos cosThetaI como valor absoluto
+            // (cosThetaI ya es positivo en este caso)
             etaI = material.ior;
             etaT = 1.0f;
+        } else {
+            // entrando al material desde el exterior
+            cosThetaI = -cosThetaI; // usar valor absoluto
+            etaI = 1.0f;
+            etaT = material.ior;
         }
         float reflectance = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
 
         // Intentar refractar
-        float eta = etaI / etaT;
+        float etaRatio = etaI / etaT; // ni/nt for refract call
         Direction refracted;
-        bool canRefract = Operations::refract(incident, normal, eta, refracted);
+        bool canRefract = Operations::refract(incident, normal, etaRatio, refracted);
 
-        // Probabilistic choice (Russian roulette-like) between reflection and transmission
+        // Probabilistic choice between reflection and transmission proportional to Fresnel
+        float R = reflectance;
+        float T = 1.0f - R;
+        float pdfR = R;
+        float pdfT = T;
+        // If one component is disallowed, zero its probability
+        // (in this code we always allow both)
+
         float xi = static_cast<float>(rand()) / RAND_MAX;
         if (!canRefract) {
-            // TIR -> reflect
+            // Total internal reflection -> must reflect
             nextDir = Operations::reflect(incident, normal);
             isDelta = true;
-            weight = material.ks;
-        } else if (xi < reflectance) {
-            // reflect
+            float absCos = std::fabs(Operations::dot(nextDir, normal));
+            if (absCos < 1e-6f) absCos = 1e-6f;
+            // weight = fr / pdf -> (R/absCos) / R = 1/absCos
+            float w = 1.0f / absCos;
+            weight = Color(w, w, w);
+        } else if (xi < pdfR / (pdfR + pdfT)) {
+            // sample reflection
             nextDir = Operations::reflect(incident, normal);
             isDelta = true;
-            weight = material.ks; // reflection uses ks
+            float absCos = std::fabs(Operations::dot(nextDir, normal));
+            if (absCos < 1e-6f) absCos = 1e-6f;
+            // fr = R / absCos, pdf = R/(R+T)=R -> fr/pdf = 1/absCos
+            float w = 1.0f / absCos;
+            weight = Color(w, w, w);
         } else {
-            // transmit
+            // sample transmission
             nextDir = refracted;
             isDelta = true;
-            weight = material.kt; // transmission uses kt
+            float absCos = std::fabs(Operations::dot(nextDir, normal));
+            if (absCos < 1e-6f) absCos = 1e-6f;
+            // For transmission, ft = T / absCos and pdf = T -> ft/pdf = 1/absCos
+            // Account for non-symmetry when transporting radiance: divide by (etaRatio)^2
+            float etap = etaRatio; // ni/nt used for refract; use same ratio for non-symmetric correction
+            float w = 1.0f / (absCos * etap * etap);
+            // apply tint from material.kt
+            weight = Color(material.kt.R * w, material.kt.G * w, material.kt.B * w);
         }
     } else {
         // Difuso: muestreo hemisférico
@@ -556,10 +588,10 @@ Pixel calcularReboteIndirecto(
         Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
         Pixel rec = calcularReboteIndirecto(hit, hitNormal, hitMaterial, newWo, primitives, lights, depth + 1, maxBounces);
 
-        // Modula por el peso del material (kd/ks/kt) por componente
-        indirect.r = rec.r * weight.R;
-        indirect.g = rec.g * weight.G;
-        indirect.b = rec.b * weight.B;
+    // Modula por el peso del material (kd/ks/kt) por componente (sin dividir por pdf)
+    indirect.r = rec.r * weight.R;
+    indirect.g = rec.g * weight.G;
+    indirect.b = rec.b * weight.B;
         // Reducir la magnitud de los rebotes difusos para evitar bleeding excesivo
         if (!isDelta) {
             indirect.r *= 0.2f;
