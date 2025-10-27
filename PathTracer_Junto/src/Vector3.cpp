@@ -83,8 +83,6 @@ Vector3 Vector3::refract(const Vector3& normal, float eta) const {
     if (cosI < 0.0f) {
         cosI = -cosI;
         N = N * -1.0f;
-        // invert eta ratio when flipping (now ni/nt becomes nt/ni)
-        if (etaRatio != 0.0f) etaRatio = 1.0f / etaRatio;
     }
 
     float sinT2 = etaRatio * etaRatio * (1.0f - cosI * cosI);

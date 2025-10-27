@@ -77,13 +77,13 @@ static Material makeMirrorSpecular() {
 }
 
 static Material makeGlassDielectric() {
-    Color kd = black;
-    Color ks = black;
-    // Transmission close to white (clear glass)
-    Color kt(1.0f, 1.0f, 1.0f);
-    Color Le = black;
+    Color kd(0.0f, 0.0f, 0.0f);          // sin difusión
+    Color ks(0.1f, 0.1f, 0.1f);       // reflejo muy tenue
+    Color kt(0.95f, 0.97f, 1.0f);        // casi transparente, un toque azul
+    float ior = 1.33f;                   // agua
+    Color Le(0.0f, 0.0f, 0.0f);          // sin emisión
     normalizeColors(kd, ks, kt);
-    return Material(kd, ks, kt, Le, 1.5f);
+    return Material(kd, ks, kt, Le, ior);
 }
 
 static Material makePlasticMaterial() {

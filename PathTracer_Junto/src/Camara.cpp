@@ -484,75 +484,46 @@ Pixel calcularReboteIndirecto(
         isDelta = true;
         weight = material.ks;
     } else if (material.isDielectric()) {
-        // Dielectric: usar Fresnel para mezclar entre reflexión y refracción
-        Direction incident = Operations::mult(wo, -1.0f);
-        float cosThetaI = Operations::dot(incident, normal);
-        // Definir etaI, etaT según orientación
-        float etaI = 1.0f; // aire
-        float etaT = material.ior;
-        // Si cosThetaI > 0 significa que el vector incidente y la normal apuntan en la misma
-        // dirección: el rayo viene desde el interior -> estamos saliendo del material.
-        if (cosThetaI > 0.0f) {
-            // saliendo del material: swap
-            // para Fresnel usamos el coseno absoluto
-            // y para Snell intercambiamos etaI/etaT
-            // conservamos cosThetaI como valor absoluto
-            // (cosThetaI ya es positivo en este caso)
-            etaI = material.ior;
-            etaT = 1.0f;
-        } else {
-            // entrando al material desde el exterior
-            cosThetaI = -cosThetaI; // usar valor absoluto
-            etaI = 1.0f;
-            etaT = material.ior;
-        }
-        float reflectance = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
+    Direction incident = Operations::mult(wo, -1.0f);
+    float cosThetaI = Operations::dot(incident, normal);
 
-        // Intentar refractar
-        float etaRatio = etaI / etaT; // ni/nt for refract call
-        Direction refracted;
-        bool canRefract = Operations::refract(incident, normal, etaRatio, refracted);
+    float etaI = 1.0f, etaT = material.ior;
+    Direction n = normal;
 
-        // Probabilistic choice between reflection and transmission proportional to Fresnel
-        float R = reflectance;
-        float T = 1.0f - R;
-        float pdfR = R;
-        float pdfT = T;
-        // If one component is disallowed, zero its probability
-        // (in this code we always allow both)
+    if (cosThetaI > 0.0f) {
+        n = Operations::mult(normal, -1.0f);
+        std::swap(etaI, etaT);
+        cosThetaI = Operations::dot(incident, n);
+    } else {
+        cosThetaI = -cosThetaI;
+    }
 
-        float xi = static_cast<float>(rand()) / RAND_MAX;
-        if (!canRefract) {
-            // Total internal reflection -> must reflect
-            nextDir = Operations::reflect(incident, normal);
-            isDelta = true;
-            float absCos = std::fabs(Operations::dot(nextDir, normal));
-            if (absCos < 1e-6f) absCos = 1e-6f;
-            // weight = fr / pdf -> (R/absCos) / R = 1/absCos
-            float w = 1.0f / absCos;
-            weight = Color(w, w, w);
-        } else if (xi < pdfR / (pdfR + pdfT)) {
-            // sample reflection
-            nextDir = Operations::reflect(incident, normal);
-            isDelta = true;
-            float absCos = std::fabs(Operations::dot(nextDir, normal));
-            if (absCos < 1e-6f) absCos = 1e-6f;
-            // fr = R / absCos, pdf = R/(R+T)=R -> fr/pdf = 1/absCos
-            float w = 1.0f / absCos;
-            weight = Color(w, w, w);
-        } else {
-            // sample transmission
-            nextDir = refracted;
-            isDelta = true;
-            float absCos = std::fabs(Operations::dot(nextDir, normal));
-            if (absCos < 1e-6f) absCos = 1e-6f;
-            // For transmission, ft = T / absCos and pdf = T -> ft/pdf = 1/absCos
-            // Account for non-symmetry when transporting radiance: divide by (etaRatio)^2
-            float etap = etaRatio; // ni/nt used for refract; use same ratio for non-symmetric correction
-            float w = 1.0f / (absCos * etap * etap);
-            // apply tint from material.kt
-            weight = Color(material.kt.R * w, material.kt.G * w, material.kt.B * w);
-        }
+    float F = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
+    float etaRatio = etaI / etaT;
+    Vector3 refracted;
+    bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaRatio, refracted);
+
+    float xi = static_cast<float>(rand()) / RAND_MAX;
+    if (!canRefract || xi < F) {
+        // REFLECTION
+        nextDir = Operations::reflect(incident, n);
+        weight = material.ks; // neutral color
+    } else {
+        // TRANSMISSION
+        nextDir = refracted;
+        float etaCorr = 1.0f / (etaRatio * etaRatio);
+        weight = Color(material.kt.R * etaCorr,
+                       material.kt.G * etaCorr,
+                       material.kt.B * etaCorr);
+    }
+
+    isDelta = true;
+
+    float eps = 0.001f;
+    float ndot = Operations::dot(nextDir, n);
+    Point nextOrigin = (ndot > 0.0f)
+        ? Operations::add(origen, Operations::mult(n, eps))
+        : Operations::add(origen, Operations::mult(n, -eps));
     } else {
         // Difuso: muestreo hemisférico
         nextDir = Operations::randomHemisphereDirection(normal);

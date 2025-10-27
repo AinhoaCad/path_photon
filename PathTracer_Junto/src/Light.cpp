@@ -105,8 +105,8 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
         float R = Operations::fresnelDielectric(cosTheta, etaI, etaT);
         float T = 1.0f - R;
         float eta = etaI / etaT; // ni/nt
-        Direction refracted;
-        bool ok = Operations::refract(incident, normal, eta, refracted);
+        Vector3 refracted;
+        bool ok = Operations::refract(incident.toVector(), normal.toVector(), eta, refracted);
         if (ok && T > 0.0f) {
             // Compute abs cos between transmitted direction and surface normal
             float absCos = std::fabs(Operations::dot(refracted, normal));
