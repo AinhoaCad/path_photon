@@ -16,7 +16,7 @@ Camera::Camera(Point origen, Direction l, Direction u, Direction f, int anchp, i
     onepixelHeight = altoPlano / pixelHeight;
 }
 
-// Método para generar un rayo hacia el centro de un píxel dado (i, j)
+// Método para generar uno/varios rayo(s) hacia el centro de un píxel dado (i, j)
 Ray Camera::generateRay(int i, int j, std::string n) {
     float pixelCenterX, pixelCenterY;
 
@@ -52,15 +52,19 @@ Ray Camera::generateRay(int i, int j, std::string n) {
     return Ray(origen.toVector(), rayDirection.toVector()); // Devolvemos el rayo con origen en la cámara y dirección calculada
 }
 
+// IMAGEN 0: Primera imagen sin luz y un rayo por pixel
 Image Camera::generateImage(const std::vector<Primitive*>& primitives) {
     Image image(pixelWidth, pixelHeight);
+
     for (int i = 0; i < pixelHeight; i++) {
         for (int j = 0; j < pixelWidth; j++) {
             Ray ray = generateRay(i, j, "uno");
-            float t = -1;
-            float mejorT = -1;
+
             Pixel p = {0, 0, 0}; // Si no intersecta, el color del píxel será este
+            float mejorT = -1;
+
             for (auto& primitive : primitives) {
+                float t = -1;
                 if (primitive->intersect(ray, t)) {
                     if ((t < mejorT || mejorT == -1) && t > 0) {
                         mejorT = t;
@@ -74,56 +78,48 @@ Image Camera::generateImage(const std::vector<Primitive*>& primitives) {
     return image;
 }
 
+// IMAGEN 1: Segunda imagen con múltiples rayos por pixel
 Image Camera::generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays) {
     Image image(pixelWidth, pixelHeight);
     srand(static_cast<unsigned>(time(NULL)));
 
-    int numPrimitives = static_cast<int>(primitives.size());
-    std::vector<float> t(numRays, -1);
-    std::vector<float> mejorT(numRays, -1);
-    std::vector<int> mejorPrimitiva(numRays, -1);
-
     for (int i = 0; i < pixelHeight; i++) {
         for (int j = 0; j < pixelWidth; j++) {
+            Pixel accumulated = {0,0,0};
 
             for (int r = 0; r < numRays; r++) {
                 Ray ray = generateRay(i, j, "varios");
-                t[r] = -1;
-                mejorT[r] = -1;
 
-                for (int k = 0; k < numPrimitives; k++) {
-                    if (primitives[k]->intersect(ray, t[r])) {
-                        if ((t[r] < mejorT[r] || mejorT[r] == -1) && t[r] > 0) {
-                            mejorT[r] = t[r];
-                            mejorPrimitiva[r] = k;
+                Pixel p = {0,0,0};
+                float mejorT = -1;
+
+
+                for (auto& primitive : primitives) {
+                    float t = -1;
+                    if (primitive->intersect(ray, t)) {
+                        if ((t < mejorT || mejorT == -1) && t > 0) {
+                            mejorT = t;
+                            p = primitive->getMaterial().toPixel();
                         }
                     }
                 }
-            }
-
-            Pixel p = {0, 0, 0}; // Color por defecto si no hay intersección
-
-            for (int r = 0; r < numRays; r++) {
-                if (mejorT[r] != -1) {
-                    Pixel p2 = primitives[mejorPrimitiva[r]]->getMaterial().toPixel(); // Obtenemos el color del material de la primitiva
-                    p.r += p2.r;
-                    p.g += p2.g;
-                    p.b += p2.b;
-                }
+                accumulated.r += p.r;
+                accumulated.g += p.g;
+                accumulated.b += p.b;
             }
 
             // Promediamos el color
-            p.r /= numRays;
-            p.g /= numRays;
-            p.b /= numRays;
+            accumulated.r /= numRays;
+            accumulated.g /= numRays;
+            accumulated.b /= numRays;
 
-            image.setPixel(i, j, p);
+            image.setPixel(i, j, accumulated);
         }
     }
-
     return image;
 }
 
+// IMAGEN 2: Tercera imagen con luz y un rayo por pixel
 Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights) {
     Image image(pixelWidth, pixelHeight);
 
@@ -264,7 +260,7 @@ Image Camera::generateImageWithLightingOneRay(const std::vector<Primitive*>& pri
     return image;
 }
 
-
+// IMAGEN 3: Cuarta imagen con luz y múltiples rayos por pixel
 Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays){
     Image image(pixelWidth, pixelHeight);
     srand(static_cast<unsigned>(time(0)));
@@ -723,4 +719,5 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     return image;
 }
 
-        
+
+
