@@ -51,3 +51,24 @@ void muestrearDireccionRebote(
     Color& weight,
     bool& isDelta
 );
+
+Pixel calcularIluminacionGlobal(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const std::vector<Primitive*>& primitives,
+    const Direction& wo,       
+    bool incluirIndirecta,
+    int depth,
+    int maxBounces
+);
+
+Pixel calcularReboteIndirecto(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights,
+    int depth,
+    int maxBounces
+);

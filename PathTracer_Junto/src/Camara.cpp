@@ -189,61 +189,9 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
     return image;
 }
 
-Pixel calcularReboteIndirecto(
-    const Point& origen,
-    const Direction& normal,
-    const Material& material,
-    const Direction& wo,
-    const std::vector<Primitive*>& primitives,
-    const std::vector<Light>& lights,
-    int depth,
-    int maxBounces
-) {
-    if (depth >= maxBounces) return {0, 0, 0};
 
-    // --- 1️⃣ Iluminación directa ---
-    Pixel colorDirecto = calcularIluminacionDirecta(origen, normal, material, wo, primitives, lights);
+// ------------- generateImageWithLightingMultipleRaysConRebotes -------------
 
-    // --- 2️⃣ Muestreo de nueva dirección según material ---
-    Direction nextDir;
-    Color weight;
-    bool isDelta = false;
-    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
-
-    // --- 3️⃣ Lanza rayo de rebote ---
-    Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
-    Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
-
-    Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
-
-    Pixel indirecto = {0, 0, 0};
-    if (inter.hayInterseccion && inter.primitiva) {
-        Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-        Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                            newWo, primitives, lights, depth + 1, maxBounces);
-
-        // Ponderar resultado recursivo
-        indirecto.r = rec.r * weight.R;
-        indirecto.g = rec.g * weight.G;
-        indirecto.b = rec.b * weight.B;
-
-        if (!isDelta) {
-            indirecto.r *= 0.2f;
-            indirecto.g *= 0.2f;
-            indirecto.b *= 0.2f;
-        }
-    }
-
-    // --- 4️⃣ Suma final ---
-    Pixel total;
-    total.r = colorDirecto.r + indirecto.r;
-    total.g = colorDirecto.g + indirecto.g;
-    total.b = colorDirecto.b + indirecto.b;
-
-    return total;
-}
-
-// ------------- generateImageWithLightingMultipleRaysConRebotes (usa calcularIluminacion + rebote) -------------
 Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     const std::vector<Primitive*>& primitives,
     const std::vector<Light>& lights,
@@ -251,80 +199,40 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     int maxBounces
 ) {
     Image image(pixelWidth, pixelHeight);
-    srand(static_cast<unsigned>(time(0)));
+    srand(static_cast<unsigned>(time(nullptr)));
 
-    for (int i = 0; i < pixelHeight; ++i) {
-        for (int j = 0; j < pixelWidth; ++j) {
-            Pixel acumulado = {0, 0, 0};
+    for (int y = 0; y < pixelHeight; ++y) {
+        for (int x = 0; x < pixelWidth; ++x) {
+            Pixel acumulado = {0,0,0};
 
             for (int r = 0; r < numRays; ++r) {
-                // 1️⃣ Generar rayo primario
-                Ray ray = generateRay(i, j, true);
-
-                // 2️⃣ Buscar intersección más cercana (usando auxiliar)
+                Ray ray = generateRay(y, x, true);
                 Interseccion inter = calcularInterseccionMasCercana(ray, primitives);
-                Pixel color = {0, 0, 0};
+                Pixel color = {0,0,0};
 
                 if (inter.hayInterseccion && inter.primitiva) {
-                    // 3️⃣ Si emite luz → añadir su radiancia
-                    if (inter.primitiva->emitsLight()) {
-                        Plane* emisiva = static_cast<Plane*>(inter.primitiva);
-                        Light areaLight = emisiva->getAreaLight();
-                        Pixel emision = areaLight.calcularRadianciaRectangular();
-                        color.r += emision.r;
-                        color.g += emision.g;
-                        color.b += emision.b;
-                    }
 
-                    // 4️⃣ Calcular iluminación directa básica (idéntica a tu versión original)
-                    std::vector<bool> inShadow(lights.size(), false);
-                    Pixel colorMat = inter.primitiva->getMaterial().toPixel();
-
-                    for (size_t l = 0; l < lights.size(); ++l) {
-                        if (estaEnSombra(inter.punto, inter.normal, lights[l], primitives)) continue;
-
-                        Pixel contrib = {0, 0, 0};
-                        if (lights[l].width > 0 && lights[l].height > 0)
-                            contrib = lights[l].calcularLuzAreaSample(inter.punto, inter.normal, colorMat,
-                                                                      lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX));
-                        else
-                            contrib = lights[l].calcularLuz(inter.punto, inter.normal, colorMat);
-
-                        color.r += contrib.r;
-                        color.g += contrib.g;
-                        color.b += contrib.b;
-                    }
-
-                    // 5️⃣ Rebote indirecto (usa tu versión completa que va bien)
-                    Material hitMat = inter.primitiva->getMaterial();
+                    //Direccion hacia la camara desde el punto de impacto
                     Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
 
-                    Pixel indirect = calcularReboteIndirecto(inter.punto, inter.normal, hitMat, wo,
-                                                             primitives, lights, 0, maxBounces);
-
-                    color.r += indirect.r;
-                    color.g += indirect.g;
-                    color.b += indirect.b;
+                    // Calcular iluminación global, incluyendo rebotes indirectos
+                    color = calcularIluminacionGlobal(inter, lights, primitives, wo, true, 0, maxBounces);
                 }
 
-                // 6️⃣ Acumular color del rayo
                 acumulado.r += color.r;
                 acumulado.g += color.g;
                 acumulado.b += color.b;
             }
-
-            // 7️⃣ Promediar por el número de rayos
+            
+            // Promediar color de todos los rayos por píxel
             acumulado.r /= numRays;
             acumulado.g /= numRays;
             acumulado.b /= numRays;
 
-            image.setPixel(i, j, acumulado);
+            image.setPixel(y, x, acumulado);
         }
     }
 
     return image;
 }
-
-
-
 
