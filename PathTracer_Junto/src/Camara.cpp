@@ -189,7 +189,6 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
     return image;
 }
 
-
 Pixel calcularReboteIndirecto(
     const Point& origen,
     const Direction& normal,
@@ -202,166 +201,49 @@ Pixel calcularReboteIndirecto(
 ) {
     if (depth >= maxBounces) return {0, 0, 0};
 
-    // ------------------ Iluminación directa en este punto ------------------
-    // Para materiales con lóbulo delta (especular o dieléctrico) la contribución directa
-    // desde fuentes de área (como el techo) no debe contarse aquí, porque esos materiales
-    // son muestreados como delta (reflejan/refractan en una dirección puntual).
-    // Por tanto evitamos sumar iluminación directa cuando el material es delta.
-    Pixel colorDirecto = {0, 0, 0};
-    bool isDeltaMaterial = material.isSpecular() || material.isDielectric();
-    if (!isDeltaMaterial) {
-        for (size_t l = 0; l < lights.size(); ++l) {
-            Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-            Point lightSample;
-            Direction toLight;
-            float dist;
+    // --- 1️⃣ Iluminación directa ---
+    Pixel colorDirecto = calcularIluminacionDirecta(origen, normal, material, wo, primitives, lights);
 
-            // Distinguir luz de área de luz puntual
-            if (lights[l].width > 0 && lights[l].height > 0) {
-                lightSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
-                toLight = Operations::sub(lightSample, shadowOrigin);
-                dist = Operations::mod(toLight);
-                toLight = Operations::norm(toLight);
-            } else {
-                lightSample = lights[l].origen;
-                toLight = Operations::sub(lightSample, shadowOrigin);
-                dist = Operations::mod(toLight);
-                toLight = Operations::norm(toLight);
-            }
-
-            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
-            bool inShadow = false;
-
-            for (auto& prim : primitives) {
-                float shadowT;
-                if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
-                    inShadow = true;
-                    break;
-                }
-            }
-
-            if (!inShadow) {
-                Pixel contrib = {0,0,0};
-                if (lights[l].width > 0 && lights[l].height > 0) {
-                    // Luz de área: usamos calcularLuzAreaSample pasando el color del material
-                    contrib = lights[l].calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample);
-                } else {
-                    // Luz puntual: podemos usar la evaluación BSDF que maneja ks/kt
-                    contrib = lights[l].calcularLuzBSDF(origen, normal, material, toLight, wo);
-                }
-                colorDirecto.r += contrib.r;
-                colorDirecto.g += contrib.g;
-                colorDirecto.b += contrib.b;
-            }
-        }
-    }
-
-    // ------------------ Muestreo para rebote indirecto ------------------
-    // Decide tipo de rebote según el material
+    // --- 2️⃣ Muestreo de nueva dirección según material ---
     Direction nextDir;
-    Color weight = material.kd; // por defecto difuso
+    Color weight;
     bool isDelta = false;
+    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
 
-    if (material.isSpecular()) {
-        // Reflexión perfecta
-        Direction incident = Operations::mult(wo, -1.0f);
-        nextDir = Operations::reflect(incident, normal);
-        isDelta = true;
-        weight = material.ks;
-    } else if (material.isDielectric()) {
-    Direction incident = Operations::mult(wo, -1.0f);
-    float cosThetaI = Operations::dot(incident, normal);
-
-    float etaI = 1.0f, etaT = material.ior;
-    Direction n = normal;
-
-    if (cosThetaI > 0.0f) {
-        n = Operations::mult(normal, -1.0f);
-        std::swap(etaI, etaT);
-        cosThetaI = Operations::dot(incident, n);
-    } else {
-        cosThetaI = -cosThetaI;
-    }
-
-    float F = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
-    float etaRatio = etaI / etaT;
-    Vector3 refracted;
-    bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaRatio, refracted);
-
-    float xi = static_cast<float>(rand()) / RAND_MAX;
-    if (!canRefract || xi < F) {
-        // REFLECTION
-        nextDir = Operations::reflect(incident, n);
-        weight = material.ks; // neutral color
-    } else {
-        // TRANSMISSION
-        nextDir = refracted;
-        float etaCorr = 1.0f / (etaRatio * etaRatio);
-        weight = Color(material.kt.R * etaCorr,
-                       material.kt.G * etaCorr,
-                       material.kt.B * etaCorr);
-    }
-
-    isDelta = true;
-
-    float eps = 0.001f;
-    float ndot = Operations::dot(nextDir, n);
-    Point nextOrigin = (ndot > 0.0f)
-        ? Operations::add(origen, Operations::mult(n, eps))
-        : Operations::add(origen, Operations::mult(n, -eps));
-    } else {
-        // Difuso: muestreo hemisférico
-        nextDir = Operations::randomHemisphereDirection(normal);
-        isDelta = false;
-        weight = material.kd;
-    }
-
-    // Traza el rayo de rebote
+    // --- 3️⃣ Lanza rayo de rebote ---
     Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
     Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
 
-    float t = -1;
-    float bestT = -1;
-    Primitive* closest = nullptr;
+    Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
 
-    for (auto& prim : primitives) {
-        if (prim->intersect(nextRay, t) && (t < bestT || bestT < 0) && t > 0) {
-            bestT = t;
-            closest = prim;
-        }
-    }
-
-    Pixel indirect = {0,0,0};
-    if (closest) {
-        Point hit = Operations::add(nextRay.origin_.toPoint(), Operations::mult(nextRay.direction_.toDirection(), bestT));
-        Direction hitNormal = closest->getPointNormal(hit);
-        Material hitMaterial = closest->getMaterial();
-        // Recursión: la nueva wo es opuesto a la dirección del rayo que llega al hit
+    Pixel indirecto = {0, 0, 0};
+    if (inter.hayInterseccion && inter.primitiva) {
         Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-        Pixel rec = calcularReboteIndirecto(hit, hitNormal, hitMaterial, newWo, primitives, lights, depth + 1, maxBounces);
+        Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
+                                            newWo, primitives, lights, depth + 1, maxBounces);
 
-    // Modula por el peso del material (kd/ks/kt) por componente (sin dividir por pdf)
-    indirect.r = rec.r * weight.R;
-    indirect.g = rec.g * weight.G;
-    indirect.b = rec.b * weight.B;
-        // Reducir la magnitud de los rebotes difusos para evitar bleeding excesivo
+        // Ponderar resultado recursivo
+        indirecto.r = rec.r * weight.R;
+        indirecto.g = rec.g * weight.G;
+        indirecto.b = rec.b * weight.B;
+
         if (!isDelta) {
-            indirect.r *= 0.2f;
-            indirect.g *= 0.2f;
-            indirect.b *= 0.2f;
+            indirecto.r *= 0.2f;
+            indirecto.g *= 0.2f;
+            indirecto.b *= 0.2f;
         }
     }
 
+    // --- 4️⃣ Suma final ---
     Pixel total;
-    total.r = colorDirecto.r + indirect.r;
-    total.g = colorDirecto.g + indirect.g;
-    total.b = colorDirecto.b + indirect.b;
+    total.r = colorDirecto.r + indirecto.r;
+    total.g = colorDirecto.g + indirecto.g;
+    total.b = colorDirecto.b + indirecto.b;
 
     return total;
 }
 
-
-
+// ------------- generateImageWithLightingMultipleRaysConRebotes (usa calcularIluminacion + rebote) -------------
 Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     const std::vector<Primitive*>& primitives,
     const std::vector<Light>& lights,
@@ -373,107 +255,76 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
 
     for (int i = 0; i < pixelHeight; ++i) {
         for (int j = 0; j < pixelWidth; ++j) {
-            Pixel accumulatedColor = {0, 0, 0};
+            Pixel acumulado = {0, 0, 0};
 
             for (int r = 0; r < numRays; ++r) {
+                // 1️⃣ Generar rayo primario
                 Ray ray = generateRay(i, j, true);
-                float t = -1;
-                float bestT = -1;
-                Primitive* closestPrimitive = nullptr;
+
+                // 2️⃣ Buscar intersección más cercana (usando auxiliar)
+                Interseccion inter = calcularInterseccionMasCercana(ray, primitives);
                 Pixel color = {0, 0, 0};
-                Pixel colorPrimitive = {0, 0, 0};
 
-                for (size_t k = 0; k < primitives.size(); ++k) {
-                    if (primitives[k]->intersect(ray, t)) {
-                        if ((t < bestT || bestT == -1) && t > 0) {
-                            bestT = t;
-                            colorPrimitive = primitives[k]->getMaterial().toPixel();
-                            closestPrimitive = primitives[k];
-                        }
-                    }
-                }
-
-                if (bestT > 0 && closestPrimitive != nullptr) {
-                    Point hitPoint = Operations::add(ray.origin_.toPoint(), Operations::mult(ray.direction_.toDirection(), bestT));
-                    Direction normal = closestPrimitive->getPointNormal(hitPoint);
-                    
-                    // Si la superficie es emisiva, agregar su emisión
-                    if (closestPrimitive->emitsLight()) {
-                        Plane* emissivePlane = static_cast<Plane*>(closestPrimitive);
-                        Light areaLight = emissivePlane->getAreaLight();
+                if (inter.hayInterseccion && inter.primitiva) {
+                    // 3️⃣ Si emite luz → añadir su radiancia
+                    if (inter.primitiva->emitsLight()) {
+                        Plane* emisiva = static_cast<Plane*>(inter.primitiva);
+                        Light areaLight = emisiva->getAreaLight();
                         Pixel emision = areaLight.calcularRadianciaRectangular();
                         color.r += emision.r;
                         color.g += emision.g;
                         color.b += emision.b;
                     }
-                    
+
+                    // 4️⃣ Calcular iluminación directa básica (idéntica a tu versión original)
                     std::vector<bool> inShadow(lights.size(), false);
+                    Pixel colorMat = inter.primitiva->getMaterial().toPixel();
 
                     for (size_t l = 0; l < lights.size(); ++l) {
-                        Point shadowOrigin = Operations::add(hitPoint, Operations::mult(normal, 0.001f));
-                        Point lightSample;
-                        Direction shadowRayDir;
-                        float maxDist;
+                        if (estaEnSombra(inter.punto, inter.normal, lights[l], primitives)) continue;
 
-                        if (lights[l].width > 0 && lights[l].height > 0) {
-                            lightSample = lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
-                            shadowRayDir = Operations::sub(lightSample, shadowOrigin);
-                            maxDist = Operations::mod(shadowRayDir);
-                            shadowRayDir = Operations::norm(shadowRayDir);
-                        } else {
-                            lightSample = lights[l].origen;
-                            shadowRayDir = Operations::sub(lightSample, shadowOrigin);
-                            maxDist = Operations::mod(shadowRayDir);
-                            shadowRayDir = Operations::norm(shadowRayDir);
-                        }
+                        Pixel contrib = {0, 0, 0};
+                        if (lights[l].width > 0 && lights[l].height > 0)
+                            contrib = lights[l].calcularLuzAreaSample(inter.punto, inter.normal, colorMat,
+                                                                      lights[l].samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX));
+                        else
+                            contrib = lights[l].calcularLuz(inter.punto, inter.normal, colorMat);
 
-                        Ray shadowRay(shadowOrigin.toVector(), shadowRayDir.toVector());
-
-                        for (size_t k = 0; k < primitives.size(); ++k) {
-                            float shadowT;
-                            if (primitives[k]->intersect(shadowRay, shadowT) && shadowT > 0.001 && shadowT < maxDist) {
-                                inShadow[l] = true;
-                                break;
-                            }
-                        }
-
-                        if (!inShadow[l]) {
-                            Pixel lightContribution;
-                            if (lights[l].width > 0 && lights[l].height > 0) {
-                                lightContribution = lights[l].calcularLuzAreaSample(hitPoint, normal, colorPrimitive, lightSample);
-                            } else {
-                                lightContribution = lights[l].calcularLuz(hitPoint, normal, colorPrimitive);
-                            }
-                            color.r += lightContribution.r;
-                            color.g += lightContribution.g;
-                            color.b += lightContribution.b;
-                        }
+                        color.r += contrib.r;
+                        color.g += contrib.g;
+                        color.b += contrib.b;
                     }
 
-                    // Preparar material y dirección saliente (wo) para el muestreo de rebote
-                    Material hitMat = closestPrimitive->getMaterial();
+                    // 5️⃣ Rebote indirecto (usa tu versión completa que va bien)
+                    Material hitMat = inter.primitiva->getMaterial();
                     Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
-                    Pixel indirect = calcularReboteIndirecto(hitPoint, normal, hitMat, wo, primitives, lights, 0, maxBounces);
+
+                    Pixel indirect = calcularReboteIndirecto(inter.punto, inter.normal, hitMat, wo,
+                                                             primitives, lights, 0, maxBounces);
+
                     color.r += indirect.r;
                     color.g += indirect.g;
                     color.b += indirect.b;
                 }
 
-                accumulatedColor.r += color.r;
-                accumulatedColor.g += color.g;
-                accumulatedColor.b += color.b;
+                // 6️⃣ Acumular color del rayo
+                acumulado.r += color.r;
+                acumulado.g += color.g;
+                acumulado.b += color.b;
             }
 
-            accumulatedColor.r /= numRays;
-            accumulatedColor.g /= numRays;
-            accumulatedColor.b /= numRays;
+            // 7️⃣ Promediar por el número de rayos
+            acumulado.r /= numRays;
+            acumulado.g /= numRays;
+            acumulado.b /= numRays;
 
-            image.setPixel(i, j, accumulatedColor);
+            image.setPixel(i, j, acumulado);
         }
     }
 
     return image;
 }
+
 
 
 

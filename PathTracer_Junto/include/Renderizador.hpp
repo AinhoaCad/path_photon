@@ -31,3 +31,23 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
 
 // Calcula la iluminación total de un punto (difusa + emisiva)
 Pixel calcularIluminacion(const Interseccion& inter, const std::vector<Light>& luces, const std::vector<Primitive*>& primitives);
+
+// Calcula la iluminación directa en un punto desde todas las luces
+Pixel calcularIluminacionDirecta(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights
+);
+
+// Calcula el rebote indirecto en un punto
+void muestrearDireccionRebote(
+    const Material& material,
+    const Direction& normal,
+    const Direction& wo,
+    Direction& nextDir,
+    Color& weight,
+    bool& isDelta
+);

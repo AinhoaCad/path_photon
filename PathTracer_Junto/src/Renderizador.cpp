@@ -100,11 +100,16 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
     return false;
 }
 
-// Calcula la iluminación de un punto en base a las luces visibles
-Pixel calcularIluminacion(const Interseccion& inter, const std::vector<Light>& luces, const std::vector<Primitive*>& primitives) {
-    Pixel colorFinal = inter.primitiva->getMaterial().toPixel();
+Pixel calcularIluminacion(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const std::vector<Primitive*>& primitives
+) {
+    Pixel colorFinal = {0, 0, 0};
+    const Material& material = inter.primitiva->getMaterial();
+    Pixel colorMat = material.toPixel();
 
-    // Si el objeto emite luz, sumarla directamente
+    // --- 1️⃣ Si el objeto emite luz, sumarla directamente ---
     if (inter.primitiva->emitsLight()) {
         Plane* emisiva = static_cast<Plane*>(inter.primitiva);
         Light areaLight = emisiva->getAreaLight();
@@ -114,35 +119,158 @@ Pixel calcularIluminacion(const Interseccion& inter, const std::vector<Light>& l
         colorFinal.b += emision.b;
     }
 
+    // --- 2️⃣ Recorremos todas las luces ---
     for (const auto& luz : luces) {
-        if (!estaEnSombra(inter.punto, inter.normal, luz, primitives)) {
-            Pixel contrib;
-            if (luz.width > 0 && luz.height > 0) {
-                // Luz de área: promediamos varias muestras
-                int muestras = 8;
-                Pixel acumulado = {0, 0, 0};
+        // Comprobamos si el punto está en sombra respecto a esta luz
+        if (estaEnSombra(inter.punto, inter.normal, luz, primitives))
+            continue;
 
-                for (int i = 0; i < muestras; ++i) {
-                    Point sample = luz.samplePointOnArea((float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
-                    Pixel ilum = luz.calcularLuzAreaSample(inter.punto, inter.normal, colorFinal, sample);
-                    acumulado.r += ilum.r;
-                    acumulado.g += ilum.g;
-                    acumulado.b += ilum.b;
-                }
+        Pixel contrib = {0, 0, 0};
 
-                contrib.r = acumulado.r / muestras;
-                contrib.g = acumulado.g / muestras;
-                contrib.b = acumulado.b / muestras;
-            } else {
-                // Luz puntual
-                contrib = luz.calcularLuz(inter.punto, inter.normal, colorFinal);
+        // --- 3️⃣ Luz de área ---
+        if (luz.width > 0 && luz.height > 0) {
+            // Promediamos varias muestras para reducir ruido
+            int numSamples = 8;
+            for (int s = 0; s < numSamples; ++s) {
+                float u = static_cast<float>(rand()) / RAND_MAX;
+                float v = static_cast<float>(rand()) / RAND_MAX;
+                Point sample = luz.samplePointOnArea(u, v);
+
+                Pixel sampleContrib = luz.calcularLuzAreaSample(
+                    inter.punto, inter.normal, colorMat, sample
+                );
+                contrib.r += sampleContrib.r;
+                contrib.g += sampleContrib.g;
+                contrib.b += sampleContrib.b;
             }
-
-            colorFinal.r = colorFinal.r + contrib.r;
-            colorFinal.g = colorFinal.g + contrib.g;
-            colorFinal.b = colorFinal.b + contrib.b;
+            contrib.r /= numSamples;
+            contrib.g /= numSamples;
+            contrib.b /= numSamples;
         }
+        // --- 4️⃣ Luz puntual ---
+        else {
+            contrib = luz.calcularLuz(inter.punto, inter.normal, colorMat);
+        }
+
+        // --- 5️⃣ Sumar contribución final ---
+        colorFinal.r += contrib.r;
+        colorFinal.g += contrib.g;
+        colorFinal.b += contrib.b;
     }
 
     return colorFinal;
 }
+
+Pixel calcularIluminacionDirecta(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights
+) {
+    Pixel color = {0, 0, 0};
+    bool isDeltaMaterial = material.isSpecular() || material.isDielectric();
+    if (isDeltaMaterial) return color;
+
+    for (const auto& luz : lights) {
+        Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
+        Point lightSample;
+        Direction toLight;
+        float dist;
+
+        if (luz.width > 0 && luz.height > 0) {
+            lightSample = luz.samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+            toLight = Operations::sub(lightSample, shadowOrigin);
+            dist = Operations::mod(toLight);
+            toLight = Operations::norm(toLight);
+        } else {
+            lightSample = luz.origen;
+            toLight = Operations::sub(lightSample, shadowOrigin);
+            dist = Operations::mod(toLight);
+            toLight = Operations::norm(toLight);
+        }
+
+        Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
+        bool inShadow = false;
+
+        for (auto& prim : primitives) {
+            float shadowT;
+            if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
+                inShadow = true;
+                break;
+            }
+        }
+
+        if (!inShadow) {
+            Pixel contrib = (luz.width > 0 && luz.height > 0)
+                ? luz.calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample)
+                : luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
+
+            color.r += contrib.r;
+            color.g += contrib.g;
+            color.b += contrib.b;
+        }
+    }
+
+    return color;
+}
+
+void muestrearDireccionRebote(
+    const Material& material,
+    const Direction& normal,
+    const Direction& wo,
+    Direction& nextDir,
+    Color& weight,
+    bool& isDelta
+) {
+    if (material.isSpecular()) {
+        Direction incident = Operations::mult(wo, -1.0f);
+        nextDir = Operations::reflect(incident, normal);
+        weight = material.ks;
+        isDelta = true;
+        return;
+    }
+
+    if (material.isDielectric()) {
+        Direction incident = Operations::mult(wo, -1.0f);
+        float cosThetaI = Operations::dot(incident, normal);
+
+        float etaI = 1.0f, etaT = material.ior;
+        Direction n = normal;
+
+        if (cosThetaI > 0.0f) {
+            n = Operations::mult(normal, -1.0f);
+            std::swap(etaI, etaT);
+            cosThetaI = Operations::dot(incident, n);
+        } else {
+            cosThetaI = -cosThetaI;
+        }
+
+        float F = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
+        float etaRatio = etaI / etaT;
+        Vector3 refracted;
+        bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaRatio, refracted);
+
+        float xi = static_cast<float>(rand()) / RAND_MAX;
+        if (!canRefract || xi < F) {
+            nextDir = Operations::reflect(incident, n);
+            weight = material.ks;
+        } else {
+            nextDir = refracted;
+            float etaCorr = 1.0f / (etaRatio * etaRatio);
+            weight = Color(material.kt.R * etaCorr,
+                           material.kt.G * etaCorr,
+                           material.kt.B * etaCorr);
+        }
+
+        isDelta = true;
+        return;
+    }
+
+    // Difuso
+    nextDir = Operations::randomHemisphereDirection(normal);
+    weight = material.kd;
+    isDelta = false;
+}
+
