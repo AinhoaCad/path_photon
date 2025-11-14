@@ -111,7 +111,7 @@ Scene createCornellBoxMaterialesRaros() {
 
 
 
-Camera CameraConfiguration() {
+Camera CameraConfiguration(int width, int height) {
 
     //--------------------------------------------------------------------------------
     
@@ -120,20 +120,58 @@ Camera CameraConfiguration() {
     Direction l(-1, 0, 0);
     Direction u(0, 1, 0);
     Direction f(0, 0, 3);
-    Camera camara(origen, l, u, f, 256, 256);
+    Camera camara(origen, l, u, f, width, height);
 
     return camara;
 }
 
-int main() {
+int main(int argc, char** argv) {
 
     //--------------------------------------------------------------
     // VARIABLES Y PARAMETROS DE RENDERIZADO
     //--------------------------------------------------------------
 
-    int numRays = 64; // Número de rayos por píxel
+    //int numRays = 64; // Número de rayos por píxel por defecto
     int maxBounces = 2; // Número máximo de rebotes de luz
     Scene scene;
+
+    //número de muestras, alto, ancho y nombre de archivo por línea de comandos
+    if (argc != 5) {
+        std::cout << "Uso: " << argv[0]
+                  << " <muestras_por_pixel> <ancho> <alto> <archivo_salida>\n";
+        std::cout << "Ejemplo: " << argv[0]
+                  << " 128 512 512 salida.ppm\n";
+        return 1;
+    }
+
+    //muestras por pixel
+    int numRays = std::stoi(argv[1]);
+    if (numRays <= 0) {
+        std::cerr << "ERROR: El número de muestras debe ser mayor que cero.\n";
+        return 1;
+    }
+
+    //ancho imagen
+    int width = std::stoi(argv[2]);
+    if (width <= 0) {
+        std::cerr << "ERROR: El ancho debe ser mayor que cero.\n";
+        return 1;
+    }
+
+    //alto imagen
+    int height = std::stoi(argv[3]);
+    if (height <= 0) {
+        std::cerr << "ERROR: El alto debe ser mayor que cero.\n";
+        return 1;
+    }
+
+    //nombre archivo
+    std::string outputFile = argv[4];
+
+    std::cout << "Renderizando con:\n"
+              << "  SPP = " << numRays << "\n"
+              << "  Resolución = " << width << " x " << height << "\n"
+              << "  Archivo = " << outputFile << "\n";
 
     //--------------------------------------------------------------
     // ESCENAS Y CÁMARA
@@ -147,7 +185,7 @@ int main() {
     scene = CornellBoxMaterialesRaros; // Escena principal para renderizar (4 esferas con materiales nuevos)
 
     // Configurar la cámara
-    Camera camera = CameraConfiguration();
+    Camera camera = CameraConfiguration(width, height);
 
     
     //--------------------------------------------------------
@@ -204,7 +242,7 @@ int main() {
     image5.clampPixels();
     image5.curvaGamma(1/2.2);
 
-    image5.writePPM("imagenLuzRebotesModificaciones.ppm");
+    image5.writePPM(outputFile);
 
 
     //--------------------------------------------------------------
