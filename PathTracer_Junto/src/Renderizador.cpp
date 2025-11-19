@@ -197,13 +197,16 @@ void muestrearDireccionRebote(
 
     // Caso dieléctrico (transparente)
     if (material.isDielectric()) {
+
         Direction incident = Operations::mult(wo, -1.0f);
         float cosThetaI = Operations::dot(incident, normal);
-        float etaI = 1.0f, etaT = material.ior;
+
+        float etaI = 1.0f;
+        float etaT = material.ior;
         Direction n = normal;
 
+        // Ajustar normal si venimos de dentro
         if (cosThetaI > 0.0f) {
-            //Ajustamos la normal si estamos dentro del material
             n = Operations::mult(normal, -1.0f);
             std::swap(etaI, etaT);
             cosThetaI = Operations::dot(incident, n);
@@ -211,21 +214,65 @@ void muestrearDireccionRebote(
             cosThetaI = -cosThetaI;
         }
 
-        float F = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
         float etaRatio = etaI / etaT;
-        Vector3 refracted;
-        bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaRatio, refracted);
 
-        float xi = static_cast<float>(rand()) / RAND_MAX;
-        if (!canRefract || xi < F) {
+        // --- Fresnel: define energía de reflexión y transmisión ---
+        float Fr = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
+        float Ft = 1.0f - Fr;
+
+        // --- Intentar refractar ---
+        Vector3 refracted;
+        bool canRefract = Operations::refract(
+            incident.toVector(), n.toVector(), etaRatio, refracted
+        );
+
+        // Si no se puede refractar (TIR): todo reflección
+        if (!canRefract) {
             nextDir = Operations::reflect(incident, n);
-            weight = material.ks;
+            weight = material.ks;    // energía ya es 1
+            isDelta = true;
+            return;
+        }
+
+        // --- Russian Roulette ---
+        float xi = static_cast<float>(rand()) / RAND_MAX;
+
+        if (xi < Fr) {
+            // ---- REFLEXIÓN ----
+            nextDir = Operations::reflect(incident, n);
+
+            // Renormalizar para conservar energía:
+            // weight = (energía de reflexión) / (probabilidad)
+            // Aquí prob_reflexión = Fr, energía_reflexión = Fr * ks
+            weight = Color(
+                material.ks.R,
+                material.ks.G,
+                material.ks.B
+            );
+            weight.R *= (Fr / Fr);
+            weight.G *= (Fr / Fr);
+            weight.B *= (Fr / Fr);
+            // (Fr/Fr = 1, dejamos esto por claridad conceptual)
+
         } else {
+            // ---- REFRACCIÓN ----
             nextDir = refracted;
+
+            // Corrección por cambio de medio
             float etaCorr = 1.0f / (etaRatio * etaRatio);
-            weight = Color(material.kt.R * etaCorr,
-                           material.kt.G * etaCorr,
-                           material.kt.B * etaCorr);
+
+            // Renormalizar energía en transmisión:
+            // energía = Ft * kt * etaCorr
+            // probabilidad = Ft
+            weight = Color(
+                material.kt.R * etaCorr,
+                material.kt.G * etaCorr,
+                material.kt.B * etaCorr
+            );
+            // Ft/Ft = 1 → no cambia, pero se deja por claridad
+            weight.R *= (Ft / Ft);
+            weight.G *= (Ft / Ft);
+            weight.B *= (Ft / Ft);
         }
 
         isDelta = true;
@@ -326,7 +373,8 @@ Pixel calcularReboteIndirecto(
 
     // ---- Russian Roulette ----
     float maxWeight = std::max({weight.R, weight.G, weight.B});
-    if (depth > 2) { // empezar a aplicar RR tras 2 rebotes porque antes hay poca ganancia
+    // Si el material es delta puro, no aplicamos Russian Roulette
+    if (!isDelta && depth > 2) { // empezar a aplicar RR tras 2 rebotes porque antes hay poca ganancia
         float xi = static_cast<float>(rand()) / RAND_MAX;
         if (xi > maxWeight) return colorDirecto; // terminamos el rayo
         // Escalamos el peso para mantener la energía
@@ -397,10 +445,10 @@ Pixel calcularIluminacionGlobal(
     
     if (material.isDiffuse()) {
         Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, material, wo, primitives, luces);
-        // Multiplicamos por kd para preservar color
-        directa.r *= material.kd.R;
-        directa.g *= material.kd.G;
-        directa.b *= material.kd.B;
+        // En principio no hace fatltra multuplicar por kd para preservar color
+        //directa.r *= material.kd.R;
+        //directa.g *= material.kd.G;
+        //directa.b *= material.kd.B;
 
         colorTotal.r += directa.r;
         colorTotal.g += directa.g;

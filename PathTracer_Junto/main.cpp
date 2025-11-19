@@ -99,7 +99,7 @@ Scene createCornellBoxMaterialesRaros() {
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, mirrorSpecular, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, plasticMaterial, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, glassDielectric, false));
     
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
