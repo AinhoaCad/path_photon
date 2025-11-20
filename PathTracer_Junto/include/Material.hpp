@@ -49,6 +49,14 @@ public:
     bool isDielectric() const {
         return (kt.R > 0.0f || kt.G > 0.0f || kt.B > 0.0f);
     }
+
+    bool isEspejoPuro() const {
+    return isSpecular() && !isDiffuse() && !isDielectric();
+}
+
+    bool isPlastic() const {
+        return isDiffuse() && isSpecular() && !isDielectric();
+    }
 };
 
 

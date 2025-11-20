@@ -61,29 +61,19 @@ Direction Operations::reflect(Direction incident, Direction normal) {
     return Operations::sub(incident, Operations::mult(normal, 2 * dotProduct));
 }
 
-bool Operations::refract(const Vector3& I, const Vector3& N, float eta, Vector3& out) {
-    Vector3 n = N;
-    float cosi = I.dotProduct(N);
-    if (cosi < -1.0f) cosi = -1.0f;
-    if (cosi >  1.0f) cosi =  1.0f;
-    float etai = 1.0f, etat = eta;
+bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    // I: dirección incidente normalizada
+    // N: normal apuntando hacia afuera del medio actual
+    // etaI: índice del medio de entrada
+    // etaT: índice del medio de salida
 
-    if (cosi > 0.0f) {
-        std::swap(etai, etat);
-        n = N * -1.0f;      // invertir normal
-        cosi = I.dotProduct(n);
-    } else {
-        cosi = -cosi;
-    }
+    float etaRatio = etaI / etaT;
+    float cosi = -std::max(-1.0f, std::min(1.0f, I.dotProduct(N))); // cos(θi), siempre positivo
 
-    float etaRatio = etai / etat;
     float k = 1.0f - etaRatio * etaRatio * (1.0f - cosi * cosi);
-
     if (k < 0.0f) return false; // TIR
 
-    float factor = etaRatio * cosi - std::sqrt(k);
-    Vector3 refracted = I * etaRatio + n * factor;
-    out = refracted.normalized();
+    out = (I * etaRatio + N * (etaRatio * cosi - std::sqrt(k))).normalized();
     return true;
 }
 

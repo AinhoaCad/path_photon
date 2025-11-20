@@ -185,101 +185,105 @@ void muestrearDireccionRebote(
     Color& weight,
     bool& isDelta
 ) {
+    Direction incident = Operations::mult(wo, -1.0f);
 
-    // Caso especular puro (espejo)
-    if (material.isSpecular()) {
-        Direction incident = Operations::mult(wo, -1.0f);
+    // ---------------- Espejo puro ----------------
+    if (material.isEspejoPuro()) {
         nextDir = Operations::reflect(incident, normal);
-        weight = material.ks; // reflejo puro
+        weight = material.ks;
         isDelta = true;
         return;
     }
 
-    // Caso dieléctrico (transparente)
+    // ---------------- Dieléctrico ----------------
     if (material.isDielectric()) {
 
-        Direction incident = Operations::mult(wo, -1.0f);
-        float cosThetaI = Operations::dot(incident, normal);
-
-        float etaI = 1.0f;
-        float etaT = material.ior;
         Direction n = normal;
+        bool entering = (Operations::dot(incident, n) < 0.0f);
+        if (!entering) n = Operations::mult(n, -1.0f);
 
-        // Ajustar normal si venimos de dentro
-        if (cosThetaI > 0.0f) {
-            n = Operations::mult(normal, -1.0f);
-            std::swap(etaI, etaT);
-            cosThetaI = Operations::dot(incident, n);
-        } else {
-            cosThetaI = -cosThetaI;
-        }
+        float etaI = entering ? 1.0f : material.ior;
+        float etaT = entering ? material.ior : 1.0f;
 
-        float etaRatio = etaI / etaT;
-
-        // --- Fresnel: define energía de reflexión y transmisión ---
-        float Fr = Operations::fresnelDielectric(cosThetaI, etaI, etaT);
-        float Ft = 1.0f - Fr;
-
-        // --- Intentar refractar ---
         Vector3 refracted;
-        bool canRefract = Operations::refract(
-            incident.toVector(), n.toVector(), etaRatio, refracted
-        );
+        // Intenta refracción (necesario para detectar TIR)
+        bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaI, etaT, refracted);
 
-        // Si no se puede refractar (TIR): todo reflección
         if (!canRefract) {
+            // --- REFLEXIÓN INTERNA TOTAL (TIR) ---
             nextDir = Operations::reflect(incident, n);
-            weight = material.ks;    // energía ya es 1
-            isDelta = true;
+            weight = material.ks; // Usamos k_s como peso reflejado
+            isDelta = true;       // CORREGIDO: Es un rebote perfectamente especular (DELTA)
             return;
         }
 
-        // --- Russian Roulette ---
+        // Usamos la energía (k_s, k_t) para la probabilidad simplificada
+        float Er = std::max({material.ks.R, material.ks.G, material.ks.B});
+        float Et = std::max({material.kt.R, material.kt.G, material.kt.B});
+        float sumE = Er + Et;
+
+        if (sumE <= 0.0f) sumE = 1.0f; // evitar cero
+
+        float Pr = Er / sumE; // Probabilidad de Reflejar
+        float Pt = Et / sumE; // Probabilidad de Refractar
+
         float xi = static_cast<float>(rand()) / RAND_MAX;
 
-        if (xi < Fr) {
-            // ---- REFLEXIÓN ----
+        if (xi < Pr) {
+            // --- REFLEXIÓN ---
             nextDir = Operations::reflect(incident, n);
-
-            // Renormalizar para conservar energía:
-            // weight = (energía de reflexión) / (probabilidad)
-            // Aquí prob_reflexión = Fr, energía_reflexión = Fr * ks
+            // Weight = k_s / P_r
             weight = Color(
-                material.ks.R,
-                material.ks.G,
-                material.ks.B
+                material.ks.R / std::max(Pr, 1e-6f),
+                material.ks.G / std::max(Pr, 1e-6f),
+                material.ks.B / std::max(Pr, 1e-6f)
             );
-            weight.R *= (Fr / Fr);
-            weight.G *= (Fr / Fr);
-            weight.B *= (Fr / Fr);
-            // (Fr/Fr = 1, dejamos esto por claridad conceptual)
-
         } else {
-            // ---- REFRACCIÓN ----
+            // --- REFRACCIÓN ---
             nextDir = refracted;
-
-            // Corrección por cambio de medio
-            float etaCorr = 1.0f / (etaRatio * etaRatio);
-
-            // Renormalizar energía en transmisión:
-            // energía = Ft * kt * etaCorr
-            // probabilidad = Ft
+            float etaRatio = etaI / etaT;
+            // CORREGIDO: Usamos la corrección por cambio de fase (etaI/etaT)^2
+            float etaCorr = etaRatio * etaRatio; 
+            // Weight = (k_t * Corrección_eta) / P_t
             weight = Color(
-                material.kt.R * etaCorr,
-                material.kt.G * etaCorr,
-                material.kt.B * etaCorr
+                (material.kt.R * etaCorr) / std::max(Pt, 1e-6f),
+                (material.kt.G * etaCorr) / std::max(Pt, 1e-6f),
+                (material.kt.B * etaCorr) / std::max(Pt, 1e-6f)
             );
-            // Ft/Ft = 1 → no cambia, pero se deja por claridad
-            weight.R *= (Ft / Ft);
-            weight.G *= (Ft / Ft);
-            weight.B *= (Ft / Ft);
         }
 
-        isDelta = true;
+        isDelta = true; // CORREGIDO: El rebote del dieléctrico es siempre DELTA.
         return;
     }
 
-    // Difuso o plástico (Lambertiano)
+    // ---------------- Plástico (difuso + especular) ----------------
+    if (material.isPlastic()) {
+        float Ed = std::max({material.kd.R, material.kd.G, material.kd.B});
+        float Es = std::max({material.ks.R, material.ks.G, material.ks.B});
+        float sum = Ed + Es;
+        if (sum <= 0.0f) sum = 1.0f;
+
+        float Pd = Ed / sum;
+        float Ps = Es / sum;
+
+        float xi = static_cast<float>(rand()) / RAND_MAX;
+        if (xi < Ps) {
+            nextDir = Operations::reflect(incident, normal);
+            weight = Color(material.ks.R / std::max(Ps, 0.05f),
+                           material.ks.G / std::max(Ps, 0.05f),
+                           material.ks.B / std::max(Ps, 0.05f));
+            isDelta = true;
+        } else {
+            nextDir = Operations::randomHemisphereDirection(normal);
+            weight = Color(material.kd.R / std::max(Pd, 0.05f),
+                           material.kd.G / std::max(Pd, 0.05f),
+                           material.kd.B / std::max(Pd, 0.05f));
+            isDelta = false;
+        }
+        return;
+    }
+
+    // ---------------- Difuso puro ----------------
     nextDir = Operations::randomHemisphereDirection(normal);
     weight = material.kd;
     isDelta = false;
@@ -296,8 +300,8 @@ Pixel calcularIluminacionDirecta(
 ) {
     Pixel color = {0,0,0};
 
-    // Si es delta puro (especular/dieléctrico sin componente difusa), no hay iluminación directa difusa
-    bool esDeltaPuro = (material.isSpecular() || material.isDielectric()) && !(material.isDiffuse());
+    // Si es espejo o dielectrico no hay iluminación directa
+    bool esDeltaPuro = (material.isEspejoPuro() || material.isDielectric());
     if (esDeltaPuro) return color;
 
     for (const auto& luz : lights) {
@@ -362,28 +366,24 @@ Pixel calcularReboteIndirecto(
 ) {
     if (depth >= maxBounces) return {0,0,0};
 
-    // Iluminación directa inicial (solo para difusos)
     Pixel colorDirecto = calcularIluminacionDirecta(origen, normal, material, wo, primitives, lights);
 
-    // Muestreo de nueva dirección
     Direction nextDir;
     Color weight;
     bool isDelta = false;
     muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
 
-    // ---- Russian Roulette ----
-    float maxWeight = std::max({weight.R, weight.G, weight.B});
-    // Si el material es delta puro, no aplicamos Russian Roulette
-    if (!isDelta && depth > 2) { // empezar a aplicar RR tras 2 rebotes porque antes hay poca ganancia
+    float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
+
+    // Russian Roulette para evitar caminos muy largos de difusos
+    if (!isDelta && depth > 2) {
         float xi = static_cast<float>(rand()) / RAND_MAX;
-        if (xi > maxWeight) return colorDirecto; // terminamos el rayo
-        // Escalamos el peso para mantener la energía
+        if (xi > maxWeight) return colorDirecto;
         weight.R /= maxWeight;
         weight.G /= maxWeight;
         weight.B /= maxWeight;
     }
 
-    // Lanzar rayo de rebote
     Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
     Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
     Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
@@ -391,27 +391,22 @@ Pixel calcularReboteIndirecto(
     Pixel indirecto = {0,0,0};
     if (inter.hayInterseccion && inter.primitiva) {
         Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-
-        // Recursivo
         Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
                                             newWo, primitives, lights, depth+1, maxBounces);
-
-        // Multiplicar por peso (kd o ks/kt)
         indirecto.r = rec.r * weight.R;
         indirecto.g = rec.g * weight.G;
         indirecto.b = rec.b * weight.B;
 
-        // Para difusos, añadir iluminación directa del rebote con factor 0.2 (tomado experimentalmente)
-        if (!isDelta) {
-            Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                                       newWo, primitives, lights);
-            indirecto.r += directa.r * 0.2f;
-            indirecto.g += directa.g * 0.2f;
-            indirecto.b += directa.b * 0.2f;
-        }
+        // Agregar iluminación directa mínima para evitar negro absoluto (quitado por el bien del dielectrico)
+        /*
+        Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, inter.primitiva->getMaterial(),
+                                                   newWo, primitives, lights);
+        indirecto.r += directa.r * 0.2f;
+        indirecto.g += directa.g * 0.2f;
+        indirecto.b += directa.b * 0.2f;
+        */
     }
 
-    // Sumar directa inicial + rebote
     Pixel total;
     total.r = colorDirecto.r + indirecto.r;
     total.g = colorDirecto.g + indirecto.g;
@@ -441,9 +436,9 @@ Pixel calcularIluminacionGlobal(
         colorTotal.b += emision.b;
     }
 
-    // --- Iluminación directa: solo si tiene difuso ---
+    // --- Iluminación directa: solo si no es delta---
     
-    if (material.isDiffuse()) {
+    if (!material.isEspejoPuro() && !material.isDielectric()) {
         Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, material, wo, primitives, luces);
         // En principio no hace fatltra multuplicar por kd para preservar color
         //directa.r *= material.kd.R;

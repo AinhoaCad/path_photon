@@ -40,9 +40,9 @@ public:
 
     //REFLEJAR
     static Direction reflect(Direction d1, Direction d2);
-    // Refract: intenta refractar 'incident' respecto a 'normal' con cociente eta (ni/nt)
-    // Devuelve true si no hay TIR y escribe el vector refractado en 'out'.
-    static bool refract(const Vector3& I, const Vector3& N, float eta, Vector3& out);
+    
+    // REFRACTAR
+    static bool refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out);
     // Fresnel para dieléctricos (unpolarized)
     // cosThetaI: coseno del ángulo entre la dirección incidente y la normal (valor absoluto)
     // etaI, etaT: índices de refracción incident/trasmitente

@@ -99,7 +99,7 @@ Scene createCornellBoxMaterialesRaros() {
 
     // Esferas
     scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, mirrorSpecular, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, glassDielectric, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, plasticMaterial, false));
     
     // Luz puntual
     scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------------
 
     //int numRays = 64; // Número de rayos por píxel por defecto
-    int maxBounces = 2; // Número máximo de rebotes de luz
+    int maxBounces = 12; // Número máximo de rebotes de luz
     Scene scene;
 
     //número de muestras, alto, ancho y nombre de archivo por línea de comandos
