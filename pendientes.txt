@@ -1,9 +1,5 @@
 
 
-----MIRAR LO DE QUE EN LA LUZ EN AREA EN VEZ DE SAMPLEAR MULTIPLES PUNTOS EN CADA RAYO HAGA SIMPLEMENTE MAS RAYOS
-
-----LOS COLORES ESPECIALES NO VAN, MIRAR COMO PODEMOS HACER
-
 
 pdf
 ----pelota izquierda 0.8 0.6 0.9
@@ -18,3 +14,5 @@ TO DO:
 
 - Ver funcion de Light de calcular BSDF y ver por que usamops Fresnel
 -Ver lo del Halo Negro en Dielectrico
+- Ver lo de los puntos blancos en la luz del techo
+- Ver lo del formato de salida de la imagen si lo podemos conservar
