@@ -115,6 +115,7 @@ Direction Operations::randomHemisphereDirection(const Direction& normal) {
     return Operations::norm(world);
 }
 
+
 float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
     // Clamp cosThetaI al rango [-1, 1]
     // Clamp manual de cosThetaI al rango [-1, 1]
@@ -147,3 +148,4 @@ float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
 
     return 0.5f * (rParallel * rParallel + rPerp * rPerp);
 }
+

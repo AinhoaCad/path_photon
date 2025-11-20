@@ -55,7 +55,7 @@ Scene createCornellBoxLuzTecho() {
         Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
         2.0f,                       // ancho
         2.0f,                       // alto
-        Pixel{40.0f, 40.0f, 40.0f}  // intensidad/poder de la luz aumentado
+        Pixel{5.0f, 5.0f, 5.0f}  // intensidad/poder de la luz aumentado
     );
     scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLight
@@ -89,7 +89,7 @@ Scene createCornellBoxMaterialesRaros() {
         Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
         2.0f,                       // ancho
         2.0f,                       // alto
-        Pixel{40.0f, 40.0f, 40.0f}  // intensidad/poder de la luz aumentado
+        Pixel{20.0f, 20.0f, 20.0f}  // intensidad/poder de la luz aumentado
     );
     scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLigh
@@ -102,7 +102,7 @@ Scene createCornellBoxMaterialesRaros() {
     scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, glassDielectric, false));
     
     // Luz puntual
-    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+    //scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
     std::cout << "Escena del Cornell Box creada." << std::endl;
 

@@ -11,19 +11,10 @@ pdf
 -----gamma 1/2.2
 
 
-path tracer
----NUMERO DE MUESTRAS POR PIXEL COMO PARAMETRO DE TECLADO
----Los parámetros de la imagen de salida también se indicarán por línea de comandos: ancho,
-alto y nombre de archivo.
+-----------------------------------
+20 de noviembre
 
-FORMULAS  ESPEJO Y DEMÁS AÑADIDOS
+TO DO:
 
-
-ENCAPSULAR!!!!
-
-19 de noviembre
-------------------------------
-
-Hay sombras duras en luces de area (revisar)
-
-Dieléctrico comprobar si estamos invirtiendo la normal bien en el caso correcto
+- Ver funcion de Light de calcular BSDF y ver por que usamops Fresnel
+-Ver lo del Halo Negro en Dielectrico

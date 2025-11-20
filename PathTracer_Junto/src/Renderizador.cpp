@@ -198,6 +198,7 @@ void muestrearDireccionRebote(
     // ---------------- Dieléctrico ----------------
     if (material.isDielectric()) {
 
+        //ver donde refleja
         Direction n = normal;
         bool entering = (Operations::dot(incident, n) < 0.0f);
         if (!entering) n = Operations::mult(n, -1.0f);
@@ -227,10 +228,11 @@ void muestrearDireccionRebote(
         float Pr = Er / sumE; // Probabilidad de Reflejar
         float Pt = Et / sumE; // Probabilidad de Refractar
 
+        //--------------Ruleta Rusa---------------
         float xi = static_cast<float>(rand()) / RAND_MAX;
 
         if (xi < Pr) {
-            // --- REFLEXIÓN ---
+            // --- REFLEXIÓN (comportamiento igual que espejo)---
             nextDir = Operations::reflect(incident, n);
             // Weight = k_s / P_r
             weight = Color(
@@ -266,14 +268,18 @@ void muestrearDireccionRebote(
         float Pd = Ed / sum;
         float Ps = Es / sum;
 
+        //-------------Ruleta Rusa--------------------------
         float xi = static_cast<float>(rand()) / RAND_MAX;
         if (xi < Ps) {
+
+            // Comportamiento espejo
             nextDir = Operations::reflect(incident, normal);
             weight = Color(material.ks.R / std::max(Ps, 0.05f),
                            material.ks.G / std::max(Ps, 0.05f),
                            material.ks.B / std::max(Ps, 0.05f));
             isDelta = true;
         } else {
+            // Comportamiento difuso
             nextDir = Operations::randomHemisphereDirection(normal);
             weight = Color(material.kd.R / std::max(Pd, 0.05f),
                            material.kd.G / std::max(Pd, 0.05f),
