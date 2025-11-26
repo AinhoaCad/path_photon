@@ -16,3 +16,5 @@ TO DO:
 -Ver lo del Halo Negro en Dielectrico
 - Ver lo de los puntos blancos en la luz del techo
 - Ver lo del formato de salida de la imagen si lo podemos conservar
+- Mirar lo de que devuelva potencia y ya cuando coca con objeto emisor -> samplePointOnArea
+- Reformular refract como en diapos

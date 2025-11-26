@@ -135,16 +135,18 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
 
 Pixel Light::calcularRadianciaRectangular() const {
     // Si no es área, devolvemos la potencia directamente
-    if (width == 0 || height == 0) return power;
-
-    float area = width * height;
+    //if (width == 0 || height == 0) return power;
+    
+    return power;
+    /*float area = width * height;
     return Pixel{
         power.r / (area * float(M_PI)),
         power.g / (area * float(M_PI)),
         power.b / (area * float(M_PI))
-    };
+    };*/
 }
 
+/*
 Point Light::samplePointOnArea(float xi1, float xi2) const {
     // Si no es área, devolvemos el origen
     if (width == 0 || height == 0) return origen;
@@ -161,6 +163,7 @@ Point Light::samplePointOnArea(float xi1, float xi2) const {
     Vector3 sample = origen.toVector() + tangent * dx + bitangent * dy;
     return Point(sample);
 }
+*/
 
 Pixel Light::calcularIntensidadLuz(Point p, const Point& lightSample) const {
     double dist2 = pow(Operations::mod(Operations::sub(lightSample, p)), 2);

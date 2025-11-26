@@ -83,11 +83,19 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
     float maxDist;
 
     // Luz de área
+    lightSample = luz.origen;
+    
+    /*
     if (luz.width > 0 && luz.height > 0) {
         lightSample = luz.samplePointOnArea((float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
     } else {
         lightSample = luz.origen;
     }
+    */
+    
+    
+
+
 
     shadowDir = Operations::sub(lightSample, shadowOrigin);
     maxDist = Operations::mod(shadowDir);
@@ -139,6 +147,8 @@ Pixel calcularIluminacion(
 
         // --- 3️⃣ Luz de área ---
         if (luz.width > 0 && luz.height > 0) {
+            /*
+            //COMENTARIO TEMPORAL
             // Promediamos varias muestras para reducir ruido
             int numSamples = 8;
             for (int s = 0; s < numSamples; ++s) {
@@ -156,6 +166,16 @@ Pixel calcularIluminacion(
             contrib.r /= numSamples;
             contrib.g /= numSamples;
             contrib.b /= numSamples;
+            */
+            
+            //SIMPLIFICAMOS LO ANTERIOR
+            
+            
+            Point origen = luz.origen;
+            contrib = luz.calcularLuzAreaSample(
+                    inter.punto, inter.normal, colorMat, origen
+                );
+            
         }
         // --- 4️⃣ Luz puntual ---
         else {
@@ -254,7 +274,7 @@ void muestrearDireccionRebote(
             );
         }
 
-        isDelta = true; // CORREGIDO: El rebote del dieléctrico es siempre DELTA.
+        isDelta = true; 
         return;
     }
 
@@ -319,7 +339,8 @@ Pixel calcularIluminacionDirecta(
 
         if (luz.width > 0 && luz.height > 0) {
             // Muestra de luz de área
-            lightSample = luz.samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+            //lightSample = luz.samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
+            lightSample = luz.origen;
             toLight = Operations::sub(lightSample, shadowOrigin);
             dist = Operations::mod(toLight);
             toLight = Operations::norm(toLight);
@@ -382,7 +403,7 @@ Pixel calcularReboteIndirecto(
     float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
 
     // Russian Roulette para evitar caminos muy largos de difusos
-    if (!isDelta && depth > 2) {
+    if (!isDelta /*&& depth > 2*/) {
         float xi = static_cast<float>(rand()) / RAND_MAX;
         if (xi > maxWeight) return colorDirecto;
         weight.R /= maxWeight;
@@ -446,7 +467,7 @@ Pixel calcularIluminacionGlobal(
     
     if (!material.isEspejoPuro() && !material.isDielectric()) {
         Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, material, wo, primitives, luces);
-        // En principio no hace fatltra multuplicar por kd para preservar color
+        // En principio no hace fatlta multiplicar por kd para preservar color
         //directa.r *= material.kd.R;
         //directa.g *= material.kd.G;
         //directa.b *= material.kd.B;
