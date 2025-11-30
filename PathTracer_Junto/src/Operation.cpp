@@ -61,7 +61,7 @@ Direction Operations::reflect(Direction incident, Direction normal) {
     return Operations::sub(incident, Operations::mult(normal, 2 * dotProduct));
 }
 
-bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+/*bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
     // I: dirección incidente normalizada
     // N: normal apuntando hacia afuera del medio actual
     // etaI: índice del medio de entrada
@@ -75,7 +75,36 @@ bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float e
 
     out = (I * etaRatio + N * (etaRatio * cosi - std::sqrt(k))).normalized();
     return true;
+}*/
+
+bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    
+    // Normalizar vectores por seguridad
+    Vector3 incident = I.normalized();
+    Vector3 normal = N.normalized();
+
+    // Calcular seno del ángulo incidente
+    float sinThetaI = std::sqrt(1.0f - std::pow(incident.dotProduct(normal), 2));
+
+    // Ley de Snell: sin(thetaT) = (etaI / etaT) * sin(thetaI)
+    float etaRatio = etaI / etaT;
+    float sinThetaT = etaRatio * sinThetaI;
+
+    // Total Internal Reflection (TIR)
+    if (sinThetaT > 1.0f) return false;
+
+    // Calcular cos(thetaT) usando sin^2 + cos^2 = 1
+    float cosThetaT = std::sqrt(1.0f - sinThetaT * sinThetaT);
+
+    // Construir dirección refractada
+    // Descomponemos incidente en paralelo y perpendicular a la normal
+    Vector3 parallel = (incident + normal * incident.dotProduct(normal)).normalized();
+    Vector3 perpendicular = normal * (-1.0f * cosThetaT);
+
+    out = (parallel * sinThetaT + perpendicular).normalized();
+    return true;
 }
+
 
 void Operations::show(Point p) {
     std::cout << p << std::endl;
