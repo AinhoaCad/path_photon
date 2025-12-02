@@ -54,7 +54,7 @@ public:
     Pixel calcularRadianciaRectangular() const;
 
     // Devuelve un punto aleatorio dentro del área rectangular
-    //Point samplePointOnArea(float xi1, float xi2) const;
+    Point samplePointOnArea(float xi1, float xi2) const;
 
     // Intensidad desde un punto muestreado en el área
     Pixel calcularIntensidadLuz(Point p, const Point& lightSample) const;

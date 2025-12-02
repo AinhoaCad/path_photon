@@ -146,7 +146,7 @@ Pixel Light::calcularRadianciaRectangular() const {
     };*/
 }
 
-/*
+
 Point Light::samplePointOnArea(float xi1, float xi2) const {
     // Si no es área, devolvemos el origen
     if (width == 0 || height == 0) return origen;
@@ -163,7 +163,6 @@ Point Light::samplePointOnArea(float xi1, float xi2) const {
     Vector3 sample = origen.toVector() + tangent * dx + bitangent * dy;
     return Point(sample);
 }
-*/
 
 Pixel Light::calcularIntensidadLuz(Point p, const Point& lightSample) const {
     double dist2 = pow(Operations::mod(Operations::sub(lightSample, p)), 2);

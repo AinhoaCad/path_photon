@@ -316,7 +316,7 @@ void muestrearDireccionRebote(
 }
 
 // ---------------- Iluminación directa ----------------
-Pixel calcularIluminacionDirecta(
+/*Pixel calcularIluminacionDirecta(
     const Point& origen,
     const Direction& normal,
     const Material& material,
@@ -378,7 +378,82 @@ Pixel calcularIluminacionDirecta(
     }
 
     return color;
+}*/
+Pixel calcularIluminacionDirecta(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights
+) {
+    Pixel color{0,0,0};
+
+    // No iluminación directa para espejos o dieléctricos
+    if (material.isEspejoPuro() || material.isDielectric()) return color;
+
+    for (const auto& luz : lights) {
+        Pixel acum{0,0,0};
+        int numMuestras = 16; // número de muestras para luz de área
+
+        // Si la luz es puntual, solo 1 muestra
+        if (luz.width <= 0.0f || luz.height <= 0.0f) numMuestras = 1;
+
+        for (int i = 0; i < numMuestras; ++i) {
+            Point lightSample = luz.origen;
+            if (numMuestras > 1) {
+                // Muestreo dentro de la luz de área
+                float xi1 = static_cast<float>(rand()) / RAND_MAX;
+                float xi2 = static_cast<float>(rand()) / RAND_MAX;
+                lightSample = luz.samplePointOnArea(xi1, xi2);
+            }
+
+            // Rayo de sombra
+            Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
+            Direction toLight = Operations::sub(lightSample, shadowOrigin);
+            float dist = Operations::mod(toLight);
+            toLight = Operations::norm(toLight);
+            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
+
+            bool inShadow = false;
+            for (auto& prim : primitives) {
+                float t;
+                if (prim->intersect(shadowRay, t) && t > 0.001f && t < dist) {
+                    inShadow = true;
+                    break;
+                }
+            }
+            if (inShadow) continue;
+
+            // Contribución de luz
+            Pixel contrib = (numMuestras > 1)
+                ? luz.calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample)
+                : luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
+
+            // Limitar valores extremos para evitar fireflies
+            contrib.r = std::min(contrib.r, 10.0f);
+            contrib.g = std::min(contrib.g, 10.0f);
+            contrib.b = std::min(contrib.b, 10.0f);
+
+            acum.r += contrib.r;
+            acum.g += contrib.g;
+            acum.b += contrib.b;
+        }
+
+        // Promediar las muestras
+        acum.r /= numMuestras;
+        acum.g /= numMuestras;
+        acum.b /= numMuestras;
+
+        // Añadir al color total
+        color.r += acum.r * material.kd.R;
+        color.g += acum.g * material.kd.G;
+        color.b += acum.b * material.kd.B;
+    }
+
+    return color;
 }
+
 
 // ---------------- Rebote indirecto ----------------
 Pixel calcularReboteIndirecto(
