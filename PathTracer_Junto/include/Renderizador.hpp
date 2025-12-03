@@ -20,6 +20,8 @@ struct Interseccion {
 
 float randomOffset(float pixelSize);
 
+bool hayLuzPuntual(const std::vector<Light>& lights);
+
 Pixel calcularColorMasCercano(Ray& ray, const std::vector<Primitive*>& primitives);
 
 Pixel promedioColores(const std::vector<Pixel>& colores);

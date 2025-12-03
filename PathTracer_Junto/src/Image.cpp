@@ -2,7 +2,9 @@
 #include <fstream>
 #include <cmath>
 #include <sstream>
+//#include <png.h>
 #include "Image.hpp"
+
 
 
 // Constructor por defecto
@@ -45,6 +47,119 @@ int Image::getWidth() const {
 int Image::getHeight() const {
     return height;
 }
+
+/*bool Image::readPNG(const std::string& filename) {
+    FILE* fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+        std::cerr << "Error: no se pudo abrir PNG: " << filename << "\n";
+        return false;
+    }
+
+    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) return false;
+
+    png_infop info = png_create_info_struct(png);
+    if (!info) return false;
+
+    if (setjmp(png_jmpbuf(png))) return false;
+
+    png_init_io(png, fp);
+    png_read_info(png, info);
+
+    width  = png_get_image_width(png, info);
+    height = png_get_image_height(png, info);
+
+    int color_type = png_get_color_type(png, info);
+    int bit_depth  = png_get_bit_depth(png, info);
+
+    // Normalizar formatos
+    if (bit_depth == 16) png_set_strip_16(png);
+    if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png);
+    if (color_type == PNG_COLOR_TYPE_GRAY) png_set_gray_to_rgb(png);
+    if (png_get_valid(png, info, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png);
+    if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) png_set_strip_alpha(png);
+
+    png_read_update_info(png, info);
+
+    // Reservar memoria
+    pixels = new Pixel[width * height];
+
+    std::vector<png_bytep> rows(height);
+    for (int y = 0; y < height; y++)
+        rows[y] = (png_bytep)malloc(png_get_rowbytes(png, info));
+
+    png_read_image(png, rows.data());
+
+    // Copiar datos en Pixel
+    for (int y = 0; y < height; y++) {
+        png_bytep row = rows[y];
+        for (int x = 0; x < width; x++) {
+            setPixel(x, y, Pixel{
+                row[x*3+0] / 255.0f,
+                row[x*3+1] / 255.0f,
+                row[x*3+2] / 255.0f
+            });
+        }
+        free(rows[y]);
+    }
+
+    fclose(fp);
+    png_destroy_read_struct(&png, &info, NULL);
+
+    return true;
+}
+
+
+bool Image::writePNG(const std::string& filename) const {
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (!fp) {
+        std::cerr << "Error: no se pudo abrir PNG para escritura: " << filename << "\n";
+        return false;
+    }
+
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) return false;
+
+    png_infop info = png_create_info_struct(png);
+    if (!info) return false;
+
+    if (setjmp(png_jmpbuf(png))) return false;
+
+    png_init_io(png, fp);
+
+    // PNG tipo 8-bit RGB
+    png_set_IHDR(
+        png, info, width, height,
+        8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+        PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
+    );
+
+    png_write_info(png, info);
+
+    // Buffer de lineas
+    std::vector<png_bytep> rows(height);
+    for (int y = 0; y < height; y++) {
+        rows[y] = (png_bytep)malloc(3 * width);
+        for (int x = 0; x < width; x++) {
+            Pixel p = getPixel(x, y);
+            rows[y][3*x+0] = (unsigned char)(std::clamp(p.r, 0.0f, 1.0f) * 255);
+            rows[y][3*x+1] = (unsigned char)(std::clamp(p.g, 0.0f, 1.0f) * 255);
+            rows[y][3*x+2] = (unsigned char)(std::clamp(p.b, 0.0f, 1.0f) * 255);
+        }
+    }
+
+    png_write_image(png, rows.data());
+    png_write_end(png, NULL);
+
+    // Liberar memoria
+    for (int y = 0; y < height; y++) free(rows[y]);
+    fclose(fp);
+
+    png_destroy_write_struct(&png, &info);
+
+    return true;
+}*/
+
 
 // Escribe la imagen en un archivo en formato PPM
 bool Image::writePPM(std::string filename) const {
@@ -192,7 +307,7 @@ void Image::curvaGamma(float gamma) {
     ecualizacion();
     
     // Verifica que gamma sea mayor que cero
-    if (gamma <= 0) {
+    if (gamma <= 0.0f) {
         std::cerr << "Error: El valor de gamma debe ser mayor que 0." << std::endl;
         return;
     }

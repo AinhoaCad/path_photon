@@ -24,6 +24,8 @@ class Image {
         int getWidth() const;
         int getHeight() const;
 
+        //bool readPNG(const std::string& filename);
+        //bool writePNG(const std::string& filename) const;
         bool writePPM(std::string filename) const;
         bool readPPM(std::string filename);
 

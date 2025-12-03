@@ -14,6 +14,16 @@ float randomOffset(float pixelSize) {
     return pixelSize * (r * 2.0 - 1.0);    
 }
 
+bool hayLuzPuntual(const std::vector<Light>& lights) {
+    for (const auto& luz : lights) {
+        if (luz.width == 0.0f && luz.height == 0.0f) {
+            return true; // Encontrada
+        }
+    }
+    return false; // Ninguna luz puntual
+}
+
+
 // Devuelve el color del material de la primitiva más cercana intersectada por el rayo.
 // Si no hay intersección, devuelve negro.
 Pixel calcularColorMasCercano(Ray& ray, const std::vector<Primitive*>& primitives) {
@@ -316,7 +326,7 @@ void muestrearDireccionRebote(
 }
 
 // ---------------- Iluminación directa ----------------
-/*Pixel calcularIluminacionDirecta(
+Pixel calcularIluminacionDirecta(
     const Point& origen,
     const Direction& normal,
     const Material& material,
@@ -330,56 +340,50 @@ void muestrearDireccionRebote(
     bool esDeltaPuro = (material.isEspejoPuro() || material.isDielectric());
     if (esDeltaPuro) return color;
 
-    for (const auto& luz : lights) {
-        // Origen del rayo de sombra desplazado para evitar auto-intersección
-        Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-        Point lightSample;
-        Direction toLight;
-        float dist;
-
-        if (luz.width > 0 && luz.height > 0) {
-            // Muestra de luz de área
-            //lightSample = luz.samplePointOnArea((float)rand()/RAND_MAX, (float)rand()/RAND_MAX);
-            lightSample = luz.origen;
-            toLight = Operations::sub(lightSample, shadowOrigin);
-            dist = Operations::mod(toLight);
-            toLight = Operations::norm(toLight);
-        } else {
+    bool existeLuzPuntual = hayLuzPuntual(lights);
+    if (existeLuzPuntual){
+        for (const auto& luz : lights) {
+            // Origen del rayo de sombra desplazado para evitar auto-intersección
+            Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
+            Point lightSample;
+            Direction toLight;
+            float dist;
+                
             // Luz puntual
             lightSample = luz.origen;
             toLight = Operations::sub(lightSample, shadowOrigin);
             dist = Operations::mod(toLight);
             toLight = Operations::norm(toLight);
-        }
-        
-        // Verificar sombras
-        Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
-        bool inShadow = false;
-        for (auto& prim : primitives) {
-            float shadowT;
-            if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
-                inShadow = true;
-                break;
+            
+            // Verificar sombras
+            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
+            bool inShadow = false;
+            for (auto& prim : primitives) {
+                float shadowT;
+                if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
+                    inShadow = true;
+                    break;
+                }
+            }
+
+            if (!inShadow) {
+                // Contribución de luz (puntual)
+                Pixel contrib = luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
+
+                // multiplicar por kd para preservar el color del material
+                color.r += contrib.r * material.kd.R;
+                color.g += contrib.g * material.kd.G;
+                color.b += contrib.b * material.kd.B;
             }
         }
-
-        if (!inShadow) {
-
-            // Contribución de luz (difusa o puntual)
-            Pixel contrib = (luz.width > 0 && luz.height > 0)
-                ? luz.calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample)
-                : luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
-
-            // multiplicar por kd para preservar el color del material
-            color.r += contrib.r * material.kd.R;
-            color.g += contrib.g * material.kd.G;
-            color.b += contrib.b * material.kd.B;
-        }
     }
-
+    else{
+        color = {0,0,0};
+    }    
     return color;
-}*/
-Pixel calcularIluminacionDirecta(
+}
+
+/*Pixel calcularIluminacionDirecta(
     const Point& origen,
     const Direction& normal,
     const Material& material,
@@ -452,7 +456,7 @@ Pixel calcularIluminacionDirecta(
     }
 
     return color;
-}
+}*/
 
 
 // ---------------- Rebote indirecto ----------------
@@ -492,21 +496,28 @@ Pixel calcularReboteIndirecto(
 
     Pixel indirecto = {0,0,0};
     if (inter.hayInterseccion && inter.primitiva) {
-        Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-        Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                            newWo, primitives, lights, depth+1, maxBounces);
-        indirecto.r = rec.r * weight.R;
-        indirecto.g = rec.g * weight.G;
-        indirecto.b = rec.b * weight.B;
+        if (inter.primitiva->emitsLight()) {
+            Plane* emisiva = static_cast<Plane*>(inter.primitiva);
+            Pixel emision = emisiva->getAreaLight().calcularRadianciaRectangular();
+            
+            indirecto = emision;
+        }else{
+            Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
+            Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
+                                                newWo, primitives, lights, depth+1, maxBounces);
+            indirecto.r = rec.r * weight.R;
+            indirecto.g = rec.g * weight.G;
+            indirecto.b = rec.b * weight.B;
 
-        // Agregar iluminación directa mínima para evitar negro absoluto (quitado por el bien del dielectrico)
-        /*
-        Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                                   newWo, primitives, lights);
-        indirecto.r += directa.r * 0.2f;
-        indirecto.g += directa.g * 0.2f;
-        indirecto.b += directa.b * 0.2f;
-        */
+            // Agregar iluminación directa mínima para evitar negro absoluto (quitado por el bien del dielectrico)
+            /*
+            Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, inter.primitiva->getMaterial(),
+                                                    newWo, primitives, lights);
+            indirecto.r += directa.r * 0.2f;
+            indirecto.g += directa.g * 0.2f;
+            indirecto.b += directa.b * 0.2f;
+            */
+        }
     }
 
     Pixel total;
@@ -533,9 +544,8 @@ Pixel calcularIluminacionGlobal(
     if (inter.primitiva->emitsLight()) {
         Plane* emisiva = static_cast<Plane*>(inter.primitiva);
         Pixel emision = emisiva->getAreaLight().calcularRadianciaRectangular();
-        colorTotal.r += emision.r;
-        colorTotal.g += emision.g;
-        colorTotal.b += emision.b;
+        
+        return emision;
     }
 
     // --- Iluminación directa: solo si no es delta---

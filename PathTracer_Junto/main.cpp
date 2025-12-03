@@ -89,7 +89,7 @@ Scene createCornellBoxMaterialesRaros() {
         Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
         2.0f,                       // ancho
         2.0f,                       // alto
-        Pixel{5.0f, 5.0f, 5.0f}  // intensidad/poder de la luz aumentado
+        Pixel{1.0f, 1.0f, 1.0f}  // intensidad/poder de la luz aumentado
     );
     scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLigh
@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
 
     //Modificaciones
     image5.clampPixels();
-    image5.curvaGamma(1/2.2);
+    image5.curvaGamma(1.0f/1.5f);
 
     image5.writePPM(outputFile);
 
