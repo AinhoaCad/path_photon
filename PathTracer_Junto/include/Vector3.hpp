@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <cstddef>
 
 //#include "Point.hpp"
 //#include "Direction.hpp"
@@ -36,6 +37,12 @@ public:
     Vector3& operator/=(float scalar);
 
     bool operator==(const Vector3& other) const;
+
+    // Acceso de LECTURA
+    const float& operator[](size_t i) const;
+
+    // Acceso de ESCRITURA
+    float& operator[](size_t i);
 
     // Álgebra vectorial
     float dotProduct(const Vector3& other) const;

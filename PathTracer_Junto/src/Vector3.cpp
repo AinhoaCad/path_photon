@@ -52,6 +52,23 @@ bool Vector3::operator==(const Vector3& other) const {
     return x == other.x && y == other.y && z == other.z;
 }
 
+
+const float& Vector3::operator[](size_t i) const {
+
+    if (i == 0) return this->x;
+    if (i == 1) return this->y;
+    
+    // Error si i > 2, pero para un Vector3 de 3D, z es la coordenada final.
+    return this->z; 
+}
+
+
+float& Vector3::operator[](size_t i) {
+    if (i == 0) return this->x;
+    if (i == 1) return this->y;
+    return this->z; 
+}
+
 // Álgebra vectorial
 float Vector3::dotProduct(const Vector3& other) const {
     return x * other.x + y * other.y + z * other.z;

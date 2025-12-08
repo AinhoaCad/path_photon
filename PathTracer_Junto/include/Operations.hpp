@@ -52,5 +52,6 @@ public:
     static void show(Direction d);
 
     static Direction randomHemisphereDirection(const Direction& normal);
+    static Vector3 sampleUniformSphereDirection();
 
 };

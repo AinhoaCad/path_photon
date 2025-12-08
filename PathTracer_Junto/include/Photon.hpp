@@ -1,13 +1,14 @@
 #pragma once
-#include "../../PathTracer_Junto/include/Vector3.hpp"
+#include "Vector3.hpp"
+#include "Image.hpp"
 
 // -----------------------------------------------------------------------------
 // Estructura que representa un fotón individual en el Photon Map
 // -----------------------------------------------------------------------------
 struct Photon {
     Vector3 position;   // Posición 3D del fotón en el espacio
-    Vector3 direction;  // Dirección desde la que llegó el fotón (útil para calcular BRDF)
-    Vector3 flux;       // Energía o color del fotón (Phi), usado para estimar radiancia
+    Vector3 directionIncidente;  // Dirección desde la que llegó el fotón (útil para calcular BRDF)
+    Pixel flux;       // Energía o color del fotón (Phi), usado para estimar radiancia
 
     // -------------------------------------------------------------------------
     // Función que devuelve la coordenada del fotón en el eje i (0=x,1=y,2=z)

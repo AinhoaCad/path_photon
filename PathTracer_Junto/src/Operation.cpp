@@ -178,3 +178,21 @@ float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
     return 0.5f * (rParallel * rParallel + rPerp * rPerp);
 }
 
+Vector3 Operations::sampleUniformSphereDirection() {
+        // Generación de números aleatorios [0, 1]
+        float r1 = (float)rand() / (float)RAND_MAX;
+        float r2 = (float)rand() / (float)RAND_MAX;
+        
+        // Transformación esférica (Método de Muestreo de la Inversa de la CDF)
+        float theta = acosf(1.0f - 2.0f * r1); // acos(1 - 2*r1)
+        float phi = 2.0f * M_PI * r2;
+
+        // Conversión a coordenadas cartesianas
+        Vector3 dir(
+            sinf(theta) * cosf(phi),
+            sinf(theta) * sinf(phi),
+            cosf(theta)
+        );
+        return dir;
+    }
+
