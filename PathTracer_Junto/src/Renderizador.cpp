@@ -584,7 +584,7 @@ Pixel calcularIluminacionGlobalConFotones(
     const std::vector<Light>& luces,
     const std::vector<Primitive*>& primitives,
     const Direction& wo,
-    PhotonMapper* photonMapper, // <-- ¡Instancia del PhotonMapper!
+    PhotonMapper* photonMapper, // <-- Instancia del PhotonMapper
     float pm_radius,
     int pm_nPhotons,
     int depth,
@@ -600,62 +600,44 @@ Pixel calcularIluminacionGlobalConFotones(
         return emision;
     }
 
-    // --- Iluminación directa (si no es delta) ---
-    // Usamos NEE para la luz directa, ya que no almacenamos el primer rebote del fotón.
+    // --- Iluminación directa ---
     if (!material.isEspejoPuro() && !material.isDielectric()) {
-        Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, material, wo, primitives, luces);
+        Pixel directa = calcularIluminacionDirecta(
+            inter.punto, inter.normal, material, wo, primitives, luces
+        );
         colorTotal.r += directa.r;
         colorTotal.g += directa.g;
         colorTotal.b += directa.b;
     }
 
-    // --- Luz Global/Indirecta ---
-    
-    // El Depth aquí asegura que solo se calculan los rebotes necesarios
+    // --- Luz global / Indirecta ---
     if (depth < maxBounces) {
-        
-        // 1. COMPONENTE NO-DELTA (Difuso, Plástico) -> Usamos Photon Mapping
+
+        // 1. No-delta → Photon Mapping
         if (!material.isEspejoPuro() && !material.isDielectric() && photonMapper) {
-            
-            // Estimamos la radiancia indirecta (L_i) usando el mapa de fotones.
+
             Color indirecta_pm = photonMapper->estimateRadiance(
-                inter.punto, inter.normal, wo, material, 
+                inter.punto, inter.normal, wo, material,
                 pm_radius, pm_nPhotons
             );
-            
+
             colorTotal.r += indirecta_pm.R;
             colorTotal.g += indirecta_pm.G;
             colorTotal.b += indirecta_pm.B;
-
-            // Nota: Para difusos, típicamente NO se calcula más rebote
-            // (Path Tracing) después de usar el Photon Map, ya que PM cubre todo
-            // el rebote difuso. Solo se considera PM para el depth 0.
-            
         }
-        // 2. COMPONENTE DELTA (Espejo, Dieléctrico) -> Usamos Path Tracing/Recursión
+        // 2. Delta → Recursión (Path Tracing)
         else if (material.isEspejoPuro() || material.isDielectric()) {
-             // Si es un material delta, usamos la recursión de Path Tracing
-             // para seguir el rebote perfecto (ya que PM no almacena fotones delta).
-             
-             // Necesitas una versión de calcularReboteIndirecto que use la nueva función
-             // de iluminación global si quieres que el rebote delta se beneficie de PM.
-             
-             // Aquí, por simplicidad, seguimos la cadena del Path Tracer original
-             // para manejar espejos y cristales perfectos.
-             
-             // Si el rebote de 'calcularReboteIndirecto' llama a 'calcularIluminacionGlobal',
-             // esta recursión usará la versión base (Path Tracing puro) para el rebote.
-             // Necesitamos que llame a esta nueva versión:
-             
-             Pixel indirecta = calcularReboteIndirectoConFotones(
-                 inter.punto, inter.normal, material, wo, 
-                 primitives, luces, photonMapper, pm_radius, pm_nPhotons, 
-                 depth, maxBounces
-             );
-             
-             colorTotal.r += indirecta.r;
-             colorTotal.g += indirecta.g;
-             colorTotal.b += indirecta.b;
+
+            Pixel indirecta = calcularReboteIndirectoConFotones(
+                inter.punto, inter.normal, material, wo,
+                primitives, luces, photonMapper,
+                pm_radius, pm_nPhotons,
+                depth, maxBounces
+            );
+
+            colorTotal.r += indirecta.r;
+            colorTotal.g += indirecta.g;
+            colorTotal.b += indirecta.b;
         }
     }
 
@@ -664,9 +646,8 @@ Pixel calcularIluminacionGlobalConFotones(
 
 
 // ------------------------------------------------------------------------------------------------
-// Función auxiliar para el rebote recursivo Delta (Necesitas crear esta función)
+// Función auxiliar para el rebote recursivo Delta (Path Tracing)
 // ------------------------------------------------------------------------------------------------
-
 
 Pixel calcularReboteIndirectoConFotones(
     const Point& origen,
@@ -681,69 +662,58 @@ Pixel calcularReboteIndirectoConFotones(
     int depth,
     int maxBounces
 ) {
-    // 1. Condición de Parada (Profundidad)
+    // 1. Parada por profundidad
     if (depth >= maxBounces) return {0,0,0};
 
-    // No calculamos luz directa aquí; se hará en la recursión si golpea un difuso.
-    
     Direction nextDir;
     Color weight;
     bool isDelta = false;
-    
-    // 2. Muestreo de la dirección de rebote (Solo Delta: Espejo/Dieléctrico)
-    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
-    
-    // Guardrail: Solo procedemos si es un rebote delta. Los rebotes difusos son cubiertos por PM.
-    if (!isDelta) return {0,0,0}; 
 
-    // 3. Ruleta Rusa (RR)
+    // 2. Solo muestreamos rebotes delta
+    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
+
+    if (!isDelta) return {0,0,0};
+
+    // 3. Ruleta rusa
     float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
-    
-    // Aplicamos RR para terminar el camino si es lo suficientemente profundo
-    if (depth > 2) { 
-        float xi = static_cast<float>(rand()) / RAND_MAX;
-        
-        // Si el rayo se absorbe, terminamos el rebote aquí.
-        if (xi > maxWeight) return {0,0,0}; 
-        
-        // Compensación de energía: si sobrevive, ajustamos el peso
+
+    if (depth > 2) {
+        float xi = float(rand()) / RAND_MAX;
+
+        if (xi > maxWeight) return {0,0,0};
+
         weight.R /= maxWeight;
         weight.G /= maxWeight;
         weight.B /= maxWeight;
     }
 
-    // 4. Traza del rayo de rebote
+    // 4. Trazar rayo del rebote
     Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
     Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
     Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
 
     Pixel indirecto = {0,0,0};
+
     if (inter.hayInterseccion && inter.primitiva) {
+
         if (inter.primitiva->emitsLight()) {
-            // Golpeó una fuente de luz: se recoge su emisión
             Plane* emisiva = static_cast<Plane*>(inter.primitiva);
             indirecto = emisiva->getAreaLight().calcularRadianciaRectangular();
-        } else {
-            // 5. Llamada Recursiva al Shader Híbrido
+        }
+        else {
             Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-            
-            // Llamamos a la función principal que decidirá si usar PM (si es difuso) o 
-            // seguir con la recursión (si es delta).
+
             Pixel rec = calcularIluminacionGlobalConFotones(
-                inter, lights, primitives, newWo, 
-                photonMapper, pm_radius, pm_nPhotons, 
+                inter, lights, primitives, newWo,
+                photonMapper, pm_radius, pm_nPhotons,
                 depth + 1, maxBounces
             );
-            
-            // 6. Aplicar el peso del rebote delta
+
             indirecto.r = rec.r * weight.R;
             indirecto.g = rec.g * weight.G;
             indirecto.b = rec.b * weight.B;
         }
     }
 
-    // Retornamos solo la contribución indirecta (el rebote delta).
-    // NOTA: El Path Tracer delta no tiene componente directo.
-    return indirecto; 
+    return indirecto;
 }
-

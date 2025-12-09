@@ -321,8 +321,8 @@ int main(int argc, char** argv) {
         PM_N_PHOTONS_SEARCH
     );
     //Modificaciones
-    image6.clampPixels();
-    image6.curvaGamma(1.0f/1.5f);
+    //image6.clampPixels();
+    //image6.curvaGamma(1.0f/1.5f);
 
     std::string pm_name = "pm_" + outputFile;
     image6.writePPM(pm_name);
