@@ -1,0 +1,19 @@
+cilindro -> en 239730643 microsegundos
+triangle -> 199482294 microsegundos
+cornellBoxDifusaNEE -> en 110690730 microsegundos
+cornellBoxDifusaPM -> en 227434144 microsegundos
+barco2ppp -> en 8 segundos
+barco8ppp -> en 19 segundos
+barco32ppp -> en 33 segundos
+barco128ppp -> en 115 segundos
+barco512ppp -> en 444 segundos
+barco1024ppp -> en 891 segundos
+fox512ppp -> en 1074 segundos
+CornellBoxMaterials512 -> en 394573655 microsegundos
+CornellBoxMaterialesN1000K10 -> en 34854364 microsegundos
+CornellBoxMaterialesN10000K10 -> en 67077317 microsegundos
+CornellBoxMaterialesN100000K10 -> en 101229890 microsegundos
+CornellBoxMaterialesN100000K1 -> en 47306002 microsegundos
+CornellBoxMaterialesN100000K10 -> en 104670747 microsegundos
+CornellBoxMaterialesN100000K50 -> en 287802056 microsegundos
+CornellBoxMaterialesN100000K100 -> en 437893192 microsegundos
