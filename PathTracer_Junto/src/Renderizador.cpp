@@ -574,3 +574,146 @@ Pixel calcularIluminacionGlobal(
     return colorTotal;
 }
 
+//---------------Seccion de calcular iluminacion con fotones --------------------
+
+// ------------------------------------------------------------------------------------------------
+// Función de Iluminación Global usando Photon Mapping (Convergencia Path Tracing + PM)
+// ------------------------------------------------------------------------------------------------
+Pixel calcularIluminacionGlobalConFotones(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const std::vector<Primitive*>& primitives,
+    const Direction& wo,
+    PhotonMapper* photonMapper, // <-- Instancia del PhotonMapper
+    float pm_radius,
+    int pm_nPhotons,
+    int depth,
+    int maxBounces
+) {
+    Pixel colorTotal = {0,0,0};
+    const Material& material = inter.primitiva->getMaterial();
+
+    // --- Emisión propia ---
+    if (inter.primitiva->emitsLight()) {
+        Plane* emisiva = static_cast<Plane*>(inter.primitiva);
+        Pixel emision = emisiva->getAreaLight().calcularRadianciaRectangular();
+        return emision;
+    }
+
+    // --- Iluminación directa ---
+    if (!material.isEspejoPuro() && !material.isDielectric()) {
+        Pixel directa = calcularIluminacionDirecta(
+            inter.punto, inter.normal, material, wo, primitives, luces
+        );
+        colorTotal.r += directa.r;
+        colorTotal.g += directa.g;
+        colorTotal.b += directa.b;
+    }
+
+    // --- Luz global / Indirecta ---
+    if (depth < maxBounces) {
+
+        // 1. No-delta → Photon Mapping
+        if (!material.isEspejoPuro() && !material.isDielectric() && photonMapper) {
+
+            Color indirecta_pm = photonMapper->estimateRadiance(
+                inter.punto, inter.normal, wo, material,
+                pm_radius, pm_nPhotons
+            );
+
+            colorTotal.r += indirecta_pm.R;
+            colorTotal.g += indirecta_pm.G;
+            colorTotal.b += indirecta_pm.B;
+        }
+        // 2. Delta → Recursión (Path Tracing)
+        else if (material.isEspejoPuro() || material.isDielectric()) {
+
+            Pixel indirecta = calcularReboteIndirectoConFotones(
+                inter.punto, inter.normal, material, wo,
+                primitives, luces, photonMapper,
+                pm_radius, pm_nPhotons,
+                depth, maxBounces
+            );
+
+            colorTotal.r += indirecta.r;
+            colorTotal.g += indirecta.g;
+            colorTotal.b += indirecta.b;
+        }
+    }
+
+    return colorTotal;
+}
+
+
+// ------------------------------------------------------------------------------------------------
+// Función auxiliar para el rebote recursivo Delta (Path Tracing)
+// ------------------------------------------------------------------------------------------------
+
+Pixel calcularReboteIndirectoConFotones(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights,
+    PhotonMapper* photonMapper,
+    float pm_radius,
+    int pm_nPhotons,
+    int depth,
+    int maxBounces
+) {
+    // 1. Parada por profundidad
+    if (depth >= maxBounces) return {0,0,0};
+
+    Direction nextDir;
+    Color weight;
+    bool isDelta = false;
+
+    // 2. Solo muestreamos rebotes delta
+    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
+
+    if (!isDelta) return {0,0,0};
+
+    // 3. Ruleta rusa
+    float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
+
+    if (depth > 2) {
+        float xi = float(rand()) / RAND_MAX;
+
+        if (xi > maxWeight) return {0,0,0};
+
+        weight.R /= maxWeight;
+        weight.G /= maxWeight;
+        weight.B /= maxWeight;
+    }
+
+    // 4. Trazar rayo del rebote
+    Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
+    Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
+    Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
+
+    Pixel indirecto = {0,0,0};
+
+    if (inter.hayInterseccion && inter.primitiva) {
+
+        if (inter.primitiva->emitsLight()) {
+            Plane* emisiva = static_cast<Plane*>(inter.primitiva);
+            indirecto = emisiva->getAreaLight().calcularRadianciaRectangular();
+        }
+        else {
+            Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
+
+            Pixel rec = calcularIluminacionGlobalConFotones(
+                inter, lights, primitives, newWo,
+                photonMapper, pm_radius, pm_nPhotons,
+                depth + 1, maxBounces
+            );
+
+            indirecto.r = rec.r * weight.R;
+            indirecto.g = rec.g * weight.G;
+            indirecto.b = rec.b * weight.B;
+        }
+    }
+
+    return indirecto;
+}

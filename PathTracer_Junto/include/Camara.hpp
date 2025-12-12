@@ -8,6 +8,8 @@
 #include "Primitive.hpp"
 #include "Matrix.hpp"
 #include "Light.hpp"
+#include "Photon.hpp"
+#include "PhotonMapper.hpp"
 class Camera {
 public:
     Point origen;
@@ -32,5 +34,14 @@ public:
     Image generateImageWithLightingOneRay(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights);
     Image generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays);
     Image generateImageWithLightingMultipleRaysConRebotes(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays, int maxBounces); 
+    Image generateImageWithLightingMultipleRaysConFotones(
+        const std::vector<Primitive*>& primitives,
+        const std::vector<Light>& lights,
+        PhotonMapper* photonMapper,
+        int numRays,
+        int maxBounces,
+        float pm_radius,
+        int pm_nPhotons
+    );
     
 };

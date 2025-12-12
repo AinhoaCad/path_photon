@@ -237,3 +237,61 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
 }
 
 
+// ------------------------------------------------------------------------------------------------
+// Función de Renderizado usando Photon Mapping para la Iluminación Global (Indirecta)
+// ------------------------------------------------------------------------------------------------
+Image Camera::generateImageWithLightingMultipleRaysConFotones(
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights,
+    PhotonMapper* photonMapper, // <-- ¡Nuevo parámetro!
+    int numRays,
+    int maxBounces,
+    float pm_radius,           // Radio de búsqueda para PM
+    int pm_nPhotons            // N fotones a buscar
+) {
+    Image image(pixelWidth, pixelHeight);
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    // Validación del PhotonMapper y Mapa
+    if (!photonMapper) {
+        std::cerr << "Advertencia: PhotonMapper nulo o vacío. Renderizando solo luz directa." << std::endl;
+    }
+
+    for (int y = 0; y < pixelHeight; ++y) {
+        for (int x = 0; x < pixelWidth; ++x) {
+            Pixel acumulado = {0,0,0};
+
+            for (int r = 0; r < numRays; ++r) {
+                Ray ray = generateRay(y, x, true);
+                Interseccion inter = calcularInterseccionMasCercana(ray, primitives);
+                Pixel color = {0,0,0};
+
+                if (inter.hayInterseccion && inter.primitiva) {
+
+                    Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+
+                    // Calcular iluminación global usando la función con Photon Mapping
+                    color = calcularIluminacionGlobalConFotones(
+                        inter, lights, primitives, wo, 
+                        photonMapper, pm_radius, pm_nPhotons, 
+                        0, maxBounces
+                    );
+                }
+
+                acumulado.r += color.r;
+                acumulado.g += color.g;
+                acumulado.b += color.b;
+            }
+            
+            // Promediar color de todos los rayos por píxel
+            acumulado.r /= numRays;
+            acumulado.g /= numRays;
+            acumulado.b /= numRays;
+
+            image.setPixel(y, x, acumulado);
+        }
+    }
+
+    return image;
+}
+

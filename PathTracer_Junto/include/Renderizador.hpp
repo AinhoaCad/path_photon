@@ -6,6 +6,8 @@
 #include "Light.hpp"
 #include "Plane.hpp"
 
+#include "Photon.hpp"
+#include "PhotonMapper.hpp"
 
 // Funciones auxiliares para el renderizado
 
@@ -76,4 +78,31 @@ Pixel calcularReboteIndirecto(
     int maxBounces
 );
 
+// -----------------------------------------------------------------------------
+// Funciones para fotones
 
+Pixel calcularIluminacionGlobalConFotones(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const std::vector<Primitive*>& primitives,
+    const Direction& wo,
+    PhotonMapper* photonMapper, // <-- ¡Instancia del PhotonMapper!
+    float pm_radius,
+    int pm_nPhotons,
+    int depth,
+    int maxBounces
+);
+
+Pixel calcularReboteIndirectoConFotones(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const std::vector<Primitive*>& primitives,
+    const std::vector<Light>& lights,
+    PhotonMapper* photonMapper,
+    float pm_radius,
+    int pm_nPhotons,
+    int depth,
+    int maxBounces
+);
