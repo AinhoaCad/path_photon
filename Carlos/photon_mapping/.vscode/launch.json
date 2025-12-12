@@ -1,0 +1,34 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/program", // Cambia esto según el nombre de tu ejecutable
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Habilitar el modo de visualización de GDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build",
+            "setupCommands": [
+                {
+                    "description": "Habilitar el modo de visualización de GDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "C:/ProgramData/chocolatey/lib/mingw/tools/install/mingw64/bin/gdb.exe", // Cambia esta ruta si es necesario
+            "stopAtConnect": false
+        }
+    ]
+}

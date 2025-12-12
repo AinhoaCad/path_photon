@@ -1,0 +1,198 @@
+#define _USE_MATH_DEFINES
+
+#include <iostream>
+#include <cmath>  // Para usar sqrt
+#include "Operations.hpp"
+
+
+Point Operations::add(Point p, Direction d) {
+    return Point(p.getX() + d.getX(), p.getY() + d.getY(), p.getZ() + d.getZ());
+}
+
+Direction Operations::add(Direction d1, Direction d2) {
+    return Direction(d1.getX() + d2.getX(), d1.getY() + d2.getY(), d1.getZ() + d2.getZ());
+}
+
+Direction Operations::sub(Point p1, Point p2) {
+    return Direction(p1.getX() - p2.getX(), p1.getY() - p2.getY(), p1.getZ() - p2.getZ());
+}
+
+Direction Operations::sub(Direction d1, Direction d2) {
+    return Direction(d1.getX() - d2.getX(), d1.getY() - d2.getY(), d1.getZ() - d2.getZ());
+}
+
+Point Operations::sub(Point p, Direction d) {
+    return Point(p.getX() - d.getX(), p.getY() - d.getY(), p.getZ() - d.getZ());
+}
+
+Direction Operations::mult(Direction d, float f) {
+    return Direction(d.getX() * f, d.getY() * f, d.getZ() * f);
+}
+
+Direction Operations::div(Direction d, float f) {
+    return Direction(d.getX() / f, d.getY() / f, d.getZ() / f);
+}
+
+float Operations::mod(Direction d) {
+    return sqrt(d.getX() * d.getX() + d.getY() * d.getY() + d.getZ() * d.getZ());
+}
+
+Direction Operations::norm(Direction d) {
+    float magnitude = mod(d);
+    return Direction(d.getX() / magnitude, d.getY() / magnitude, d.getZ() / magnitude);
+}
+
+float Operations::dot(Direction d1, Direction d2) {
+    return (d1.getX() * d2.getX() + d1.getY() * d2.getY() + d1.getZ() * d2.getZ());
+}
+
+float Operations::dot(Direction d, Point p) {
+    return (d.getX() * p.getX() + d.getY() * p.getY() + d.getZ() * p.getZ());
+}
+
+Direction Operations::cross(Direction d1, Direction d2) {
+    return Direction(d1.getY() * d2.getZ() - d1.getZ() * d2.getY(),
+                     d1.getZ() * d2.getX() - d1.getX() * d2.getZ(),
+                     d1.getX() * d2.getY() - d1.getY() * d2.getX());
+}
+
+Direction Operations::reflect(Direction incident, Direction normal) {
+    float dotProduct = Operations::dot(incident, normal);
+    return Operations::sub(incident, Operations::mult(normal, 2 * dotProduct));
+}
+
+/*bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    // I: dirección incidente normalizada
+    // N: normal apuntando hacia afuera del medio actual
+    // etaI: índice del medio de entrada
+    // etaT: índice del medio de salida
+
+    float etaRatio = etaI / etaT;
+    float cosi = -std::max(-1.0f, std::min(1.0f, I.dotProduct(N))); // cos(θi), siempre positivo
+
+    float k = 1.0f - etaRatio * etaRatio * (1.0f - cosi * cosi);
+    if (k < 0.0f) return false; // TIR
+
+    out = (I * etaRatio + N * (etaRatio * cosi - std::sqrt(k))).normalized();
+    return true;
+}*/
+
+bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    
+    // Normalizar vectores por seguridad
+    Vector3 incident = I.normalized();
+    Vector3 normal = N.normalized();
+
+    // Calcular seno del ángulo incidente
+    float sinThetaI = std::sqrt(1.0f - std::pow(incident.dotProduct(normal), 2));
+
+    // Ley de Snell: sin(thetaT) = (etaI / etaT) * sin(thetaI)
+    float etaRatio = etaI / etaT;
+    float sinThetaT = etaRatio * sinThetaI;
+
+    // Total Internal Reflection (TIR)
+    if (sinThetaT > 1.0f) return false;
+
+    // Calcular cos(thetaT) usando sin^2 + cos^2 = 1
+    float cosThetaT = std::sqrt(1.0f - sinThetaT * sinThetaT);
+
+    // Construir dirección refractada
+    // Descomponemos incidente en paralelo y perpendicular a la normal
+    Vector3 parallel = (incident + normal * incident.dotProduct(normal)).normalized();
+    Vector3 perpendicular = normal * (-1.0f * cosThetaT);
+
+    out = (parallel * sinThetaT + perpendicular).normalized();
+    return true;
+}
+
+
+void Operations::show(Point p) {
+    std::cout << p << std::endl;
+}
+
+void Operations::show(Direction d) {
+    std::cout << d << std::endl;
+}
+
+Direction Operations::randomHemisphereDirection(const Direction& normal) {
+    float u = static_cast<float>(rand()) / RAND_MAX;
+    float v = static_cast<float>(rand()) / RAND_MAX;
+
+    float theta = acos(sqrt(1.0f - u));
+    float phi = 2.0f * M_PI * v;
+
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+
+    // Coordenadas locales
+    Direction local(x, y, z);
+
+    // Construir base ortonormal
+    Direction up = normal;
+    Direction right = Operations::norm(Operations::cross(up, Direction(0.0072, 1.0, 0.0034)));
+    Direction forward = Operations::cross(right, up);
+
+    Direction world = Operations::add(
+        Operations::add(
+            Operations::mult(right, x),
+            Operations::mult(forward, y)
+        ),
+        Operations::mult(up, z)
+    );
+
+    return Operations::norm(world);
+}
+
+
+float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
+    // Clamp cosThetaI al rango [-1, 1]
+    // Clamp manual de cosThetaI al rango [-1, 1]
+    if (cosThetaI < -1.0f) cosThetaI = -1.0f;
+    else if (cosThetaI > 1.0f) cosThetaI = 1.0f;
+
+    bool entering = cosThetaI > 0.0f;
+    // Si estamos saliendo del material, intercambiamos los índices
+    if (!entering) {
+        std::swap(etaI, etaT);
+        cosThetaI = std::fabs(cosThetaI);
+    }
+
+    // Ley de Snell
+    float sinThetaI = std::sqrt(std::max(0.0f, 1.0f - cosThetaI * cosThetaI));
+    float sinThetaT = etaI / etaT * sinThetaI;
+
+    // Reflexión total interna
+    if (sinThetaT >= 1.0f) {
+        return 1.0f;
+    }
+
+    float cosThetaT = std::sqrt(std::max(0.0f, 1.0f - sinThetaT * sinThetaT));
+
+    // Coeficientes de Fresnel (no polarizados)
+    float rParallel = ((etaT * cosThetaI) - (etaI * cosThetaT)) /
+                      ((etaT * cosThetaI) + (etaI * cosThetaT));
+    float rPerp = ((etaI * cosThetaI) - (etaT * cosThetaT)) /
+                  ((etaI * cosThetaI) + (etaT * cosThetaT));
+
+    return 0.5f * (rParallel * rParallel + rPerp * rPerp);
+}
+
+Vector3 Operations::sampleUniformSphereDirection() {
+        // Generación de números aleatorios [0, 1]
+        float r1 = (float)rand() / (float)RAND_MAX;
+        float r2 = (float)rand() / (float)RAND_MAX;
+        
+        // Transformación esférica (Método de Muestreo de la Inversa de la CDF)
+        float theta = acosf(1.0f - 2.0f * r1); // acos(1 - 2*r1)
+        float phi = 2.0f * M_PI * r2;
+
+        // Conversión a coordenadas cartesianas
+        Vector3 dir(
+            sinf(theta) * cosf(phi),
+            sinf(theta) * sinf(phi),
+            cosf(theta)
+        );
+        return dir;
+    }
+
