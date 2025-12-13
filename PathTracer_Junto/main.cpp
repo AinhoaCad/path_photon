@@ -4,53 +4,6 @@
 #include "Primitive.hpp"
 #include "Material.hpp"
 
-#include "PhotonMapper.hpp"
-#include "Photon.hpp"
-
-
-/**
- * @brief Crea, configura y construye el mapa de fotones para la escena.
- * * @param scene La escena con primitivas y luces.
- * @param maxBounces Máximo de rebotes permitidos para los fotones.
- * @return PhotonMapper El objeto PhotonMapper ya construido.
- */
-
-// --- Función auxiliar corregida para coincidir con la implementación de PhotonMapper.cpp ---
-
-PhotonMapper createAndBuildPhotonMapper(
-    Scene& scene, 
-    int maxBounces
-) {
-    // --------------------------------------------------------------
-    // 1. PARÁMETROS DEL PHOTON MAPPER
-    // --------------------------------------------------------------
-    
-    // Total de fotones a emitir (ajusta este valor)
-    const int N_PHOTONS_TO_SHOOT = 1000000; 
-    const int PM_MAX_BOUNCES = maxBounces; 
-    
-    std::cout << "\n--- 🔨 Construyendo Photon Map (Fase 1) ---\n";
-    std::cout << "   Fotones a emitir = " << N_PHOTONS_TO_SHOOT << "\n"
-              << "   Rebotes max. = " << PM_MAX_BOUNCES << "\n";
-              
-    // --------------------------------------------------------------
-    // 2. CONSTRUCCIÓN (Inicialización y Emisión)
-    // --------------------------------------------------------------
-    
-    // ¡CORPasar la dirección de la escena (Scene*) al constructor
-    PhotonMapper photonMapper(&scene); 
-
-    // Paso A: Emitir fotones y trazar sus caminos (guarda en photons_ internamente)
-    // Nota: Suponemos que tu lógica interna usa PM_MAX_BOUNCES, aunque 'emitPhotons'
-    // no lo recibe directamente, la variable global MAX_PHOTON_DEPTH parece controlarlo.
-    // Si necesitas PM_MAX_BOUNCES, modifica 'emitPhotons' para recibirlo.
-    photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT);
-    
-    // Paso B: Construir el KD-Tree a partir de los fotones almacenados
-    photonMapper.buildPhotonMap();
-    
-    return photonMapper;
-}
 
 Scene createCornellBox() {
     Scene scene;
@@ -295,38 +248,6 @@ int main(int argc, char** argv) {
     image5.curvaGamma(1.0f/1.5f);
 
     image5.writePPM(outputFile);
-
-    //--------------------------------------------------------------
-    // IMAGEN 6: Séptima imagen con Photon Mapping
-    //--------------------------------------------------------------
-
-    // 1. Fase de Construcción (Llamada a la función)
-    // La escena (scene) debe ser pasada por referencia a la función.
-    PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces);
-
-    
-
-    std::cout << "\n--- 🎨 Renderizando con Photon Mapping (Fase 2: Estimación) ---\n";
-    std::cout << "   Fotones a buscar (N) = " << PM_N_PHOTONS_SEARCH << "\n";
-    std::cout << "   Radio max. (R) = " << PM_MAX_RADIUS << "\n";
-
-
-    Image image6 = camera.generateImageWithLightingMultipleRaysConFotones(
-        scene.getPrimitives(), 
-        scene.getLights(), 
-        &photonMapper, // Pasamos el mapa por PUNTERO
-        numRays, 
-        maxBounces,
-        PM_MAX_RADIUS,
-        PM_N_PHOTONS_SEARCH
-    );
-    //Modificaciones
-    //image6.clampPixels();
-    //image6.curvaGamma(1.0f/1.5f);
-
-    std::string pm_name = "pm_" + outputFile;
-    image6.writePPM(pm_name);
-    std::cout << "Imagen de Photon Mapping guardada en: " << pm_name << std::endl;
 
 
     //--------------------------------------------------------------
