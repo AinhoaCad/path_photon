@@ -92,7 +92,7 @@ void PhotonMapper::buildPhotonMap() {
 // --------------------------------------------------------------------
 // Emitir fotones
 // --------------------------------------------------------------------
-void PhotonMapper::emitPhotons(int nPhotons) {
+void PhotonMapper::emitPhotons(int nPhotons, float amplificationFactor) {
     if (nPhotons <= 0) return;
 
     photons_.clear();
@@ -119,7 +119,8 @@ void PhotonMapper::emitPhotons(int nPhotons) {
     if (pointLightIndices.empty()) return;
 
     // Amplify per-photon flux to make indirect visible (tuning factor)
-    const float M = 100.0f;
+    const float M = amplificationFactor;
+    std::cout << "Emitiendo " << nPhotons << " fotones (M=" << M << ")..." << std::endl;
     Color fluxPerPhoton(
         (totalScenePower.R / nPhotons) * M,
         (totalScenePower.G / nPhotons) * M,

@@ -18,15 +18,17 @@
 PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces) {
 
     const int N_PHOTONS_TO_SHOOT = 1000000;
+    const float M = 100.0f;
     const int PM_MAX_BOUNCES = maxBounces;
 
     std::cout << "\n--- Construyendo Photon Map (Fase 1: Emision) ---\n";
     std::cout << "   Fotones a emitir = " << N_PHOTONS_TO_SHOOT << "\n"
+              << "   Factor M (amplificacion) = " << M << "\n"
               << "   Rebotes max = " << PM_MAX_BOUNCES << "\n";
 
     PhotonMapper photonMapper(&scene);
 
-    photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT);
+    photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT, M);
 
     photonMapper.buildPhotonMap();
 
@@ -130,9 +132,9 @@ int main(int argc, char** argv) {
     int maxBounces = 12;
     Scene scene;
 
-    const int PM_N_PHOTONS_SEARCH = 100;
-    const float PM_MAX_RADIUS = 1.2f;
-    const KERNEL PM_KERNEL_TYPE = CONE;
+    const int PM_N_PHOTONS_SEARCH = 30;
+    const float PM_MAX_RADIUS = 0.75f;
+    const KERNEL PM_KERNEL_TYPE = BOX;
 
     if (argc != 5) {
         std::cout << "Uso: " << argv[0]
