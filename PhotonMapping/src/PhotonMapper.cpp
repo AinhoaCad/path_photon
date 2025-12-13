@@ -257,6 +257,19 @@ Color PhotonMapper::estimateRadiance(
     }
 
     float finalRadius = std::sqrt(finalRadiusSq);
+    // Debug: print found photon count and final radius for first few queries
+    {
+        static int pm_query_debug = 0;
+        if (pm_query_debug < 10) {
+            pm_query_debug++;
+            fprintf(stderr,
+                "PM Query #%d at (%.3f, %.3f, %.3f) n=(%.3f, %.3f, %.3f) -> found=%zu finalRadius=%.3f (maxR=%.3f, N=%d)\n",
+                pm_query_debug,
+                p.x, p.y, p.z,
+                normal.x, normal.y, normal.z,
+                foundPtrs.size(), finalRadius, maxRadius, nPhotonsToFind);
+        }
+    }
     float area = M_PI * finalRadius * finalRadius;
     float normalization_factor = 1.0f / (area * float(M_PI)); 
 

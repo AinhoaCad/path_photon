@@ -15,10 +15,10 @@
  * @return PhotonMapper El objeto PhotonMapper ya construido.
  */
 
-PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces) {
+PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces, float amplificationM) {
 
-    const int N_PHOTONS_TO_SHOOT = 1000000;
-    const float M = 100.0f;
+    const int N_PHOTONS_TO_SHOOT = 100000;
+    const float M = amplificationM;
     const int PM_MAX_BOUNCES = maxBounces;
 
     std::cout << "\n--- Construyendo Photon Map (Fase 1: Emision) ---\n";
@@ -27,7 +27,6 @@ PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces) {
               << "   Rebotes max = " << PM_MAX_BOUNCES << "\n";
 
     PhotonMapper photonMapper(&scene);
-
     photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT, M);
 
     photonMapper.buildPhotonMap();
@@ -132,9 +131,10 @@ int main(int argc, char** argv) {
     int maxBounces = 12;
     Scene scene;
 
-    const int PM_N_PHOTONS_SEARCH = 30;
-    const float PM_MAX_RADIUS = 0.75f;
-    const KERNEL PM_KERNEL_TYPE = BOX;
+    const int PM_N_PHOTONS_SEARCH = 1000;
+    const float PM_MAX_RADIUS = 0.1f;
+    const KERNEL PM_KERNEL_TYPE = CONE;
+    const float M = 100.0f; // Amplification factor for photon flux
 
     if (argc != 5) {
         std::cout << "Uso: " << argv[0]
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
 
     Camera camera = CameraConfiguration(width, height);
 
-    PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces);
+    PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces, M);
 
     std::cout << "\n--- Renderizando con Photon Mapping ---\n";
     std::cout << "  Fotones a buscar = " << PM_N_PHOTONS_SEARCH << "\n";
@@ -184,7 +184,24 @@ int main(int argc, char** argv) {
     image.clampPixels();
     image.curvaGamma(1.0f / 1.5f);
 
+    // Build informative filename suffix: <base>_<Kernel>M<M>N<N>R<R>
+    // Kernel: Box | Cone | Gaussian
+    // Radius: print with two decimals (e.g., R1.00)
+    std::string kernelName = (PM_KERNEL_TYPE == BOX ? "Box" : (PM_KERNEL_TYPE == CONE ? "Cone" : "Gaussian"));
+    char suffix[64];
+    snprintf(suffix, sizeof(suffix), "_%sM%dN%dR%.2f", kernelName.c_str(), (int)M, PM_N_PHOTONS_SEARCH, PM_MAX_RADIUS);
+    // Insert suffix before extension
     std::string pm_name = "pm_" + outputFile;
+    size_t dot = pm_name.find_last_of('.');
+    if (dot != std::string::npos) {
+        pm_name.insert(dot, suffix);
+    } else {
+        pm_name += suffix;
+    }
+    // Ensure filename ends with .ppm
+    if (pm_name.size() < 4 || pm_name.substr(pm_name.size() - 4) != ".ppm") {
+        pm_name += ".ppm";
+    }
     image.writePPM(pm_name);
 
     std::cout << "Imagen guardada en: " << pm_name << std::endl;
