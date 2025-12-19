@@ -3,6 +3,7 @@
 #include "Material.hpp"
 #include "Primitive.hpp"
 #include "Light.hpp"
+#include "AABB.hpp"
 
 class Plane : public Primitive {
 public:
@@ -28,6 +29,8 @@ public:
     // Luz asociada
     Light getAreaLight() const;
     bool emitsLight() const override; // devuelve true si el plano emite luz
+
+    AABB boundingBox() const override;
 
     // Setters (compatibilidad)
     void setDistancia(float d);

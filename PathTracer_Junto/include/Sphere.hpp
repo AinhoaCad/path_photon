@@ -2,6 +2,7 @@
 
 #include "Material.hpp"
 #include "Primitive.hpp"
+#include "AABB.hpp"
 
 class Sphere : public Primitive {
 public:
@@ -22,6 +23,8 @@ public:
     Material getMaterial() const override;
     bool getEmision() const;
     bool emitsLight() const override;
+
+    AABB boundingBox() const override;
 
     // Setters (compatibilidad)
     void setCentro(const Vector3& c);

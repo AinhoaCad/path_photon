@@ -17,6 +17,10 @@ void Scene::addLight(const Light& light) {
     lights.push_back(light);
 }
 
+void Scene::addTriangle(const Triangle& tri) {
+    triangles.push_back(tri);
+}
+
 const std::vector<Sphere>& Scene::getSpheres() const {
     return spheres;
 }
@@ -29,9 +33,13 @@ const std::vector<Light>& Scene::getLights() const {
     return lights;
 }
 
+const std::vector<Triangle>& Scene::getTriangles() const {
+    return triangles;
+}
+
 // Método para obtener el número de primitivas en la escena
 size_t Scene::getNumPrimitives() const {
-    return spheres.size() + planes.size();
+    return spheres.size() + planes.size() + triangles.size();
 }
 
 // Método para obtener las primitivas de la escena
@@ -43,6 +51,9 @@ const std::vector<Primitive*> Scene::getPrimitives() const {
     }
     for (const auto& plane : planes) {
         primitives.push_back(const_cast<Plane*>(&plane));
+    }
+    for (const auto& tri : triangles) {
+        primitives.push_back(const_cast<Triangle*>(&tri));
     }
     return primitives;
 }

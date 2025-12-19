@@ -77,3 +77,9 @@ bool Plane::emitsLight() const {
     return emision_;
 }
 
+// Bounding box for an infinite plane is not bounded; return a very large box to satisfy BVH.
+AABB Plane::boundingBox() const {
+    const float M = 1e6f;
+    return AABB(Vector3(-M, -M, -M), Vector3(M, M, M));
+}
+

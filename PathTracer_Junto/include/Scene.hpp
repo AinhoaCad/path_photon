@@ -3,12 +3,14 @@
 #include <vector>
 #include "Sphere.hpp"
 #include "Plane.hpp"
+#include "Triangle.hpp"
 #include "Light.hpp"
 
 class Scene {
 public:
     std::vector<Sphere> spheres;      // Esferas en la escena
     std::vector<Plane> planes;        // Planos en la escena
+    std::vector<Triangle> triangles;  // Triángulos en la escena
     std::vector<Light> lights;   // Luces en la escena
 
     // Constructor por defecto
@@ -17,6 +19,7 @@ public:
     // Métodos para agregar elementos a la escena
     void addSphere(const Sphere& sphere);
     void addPlane(const Plane& plane);
+    void addTriangle(const Triangle& tri);
     void addLight(const Light& light);
 
     // Método para obtener el número de primitivas en la escena
@@ -30,5 +33,6 @@ public:
     // Métodos para obtener los elementos de la escena
     const std::vector<Sphere>& getSpheres() const;
     const std::vector<Plane>& getPlanes() const;
+    const std::vector<Triangle>& getTriangles() const;
     const std::vector<Light>& getLights() const;
 };

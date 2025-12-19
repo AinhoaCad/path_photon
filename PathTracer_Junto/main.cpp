@@ -3,6 +3,7 @@
 #include "Camara.hpp"
 #include "Primitive.hpp"
 #include "Material.hpp"
+#include "Triangle.hpp"
 
 
 Scene createCornellBox() {
@@ -110,6 +111,37 @@ Scene createCornellBoxMaterialesRaros() {
     return scene;
 }
 
+// Cornell Box con una malla simple (dos triángulos formando un quad inclinado)
+Scene createCornellBoxConMalla() {
+    Scene scene;
+
+    // Paredes
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse));  // techo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
+
+    // Luz puntual centrada
+    scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+    // Malla: quad inclinado
+    Point p0(-0.4f, -0.7f, 0.25f);
+    Point p1( 0.4f, -0.7f, 0.25f);
+    Point p2( 0.4f, -0.25f, -0.2f);
+    Point p3(-0.4f, -0.25f, -0.2f);
+
+    Vector3 e1 = p1 - p0;
+    Vector3 e2 = p2 - p0;
+    Direction n = e1.cross(e2).normalized().toDirection();
+
+    scene.addTriangle(Triangle(p0, p1, p2, n, n, n, purpleDiffuse));
+    scene.addTriangle(Triangle(p0, p2, p3, n, n, n, plasticMaterial));
+
+    std::cout << "Cornell Box con malla sencilla creada." << std::endl;
+    return scene;
+}
+
 
 
 Camera CameraConfiguration(int width, int height) {
@@ -186,8 +218,9 @@ int main(int argc, char** argv) {
     Scene CornellBoxBasica = createCornellBox();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
+    Scene CornellBoxConMalla = createCornellBoxConMalla();
 
-    scene = CornellBoxBasica; // Escena principal para renderizar (4 esferas con materiales nuevos)
+    scene = CornellBoxConMalla; // Escena principal: Cornell con malla de triángulos
 
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
