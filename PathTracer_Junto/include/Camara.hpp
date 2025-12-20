@@ -34,5 +34,7 @@ public:
     Image generateImageWithLightingMultipleRays(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays);
     Image generateImageWithLightingMultipleRaysConRebotes(const std::vector<Primitive*>& primitives, const std::vector<Light>& lights, int numRays, int maxBounces); 
 
+    // Nuevos métodos con aceleración BVH (opcionales, no tocan los anteriores)
+    Image generateImageWithLightingBVH(const class SceneBVH& sceneBVH, const std::vector<Light>& lights, int numRays, int maxBounces);
     
 };

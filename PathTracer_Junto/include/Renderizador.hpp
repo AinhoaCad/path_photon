@@ -74,3 +74,31 @@ Pixel calcularReboteIndirecto(
     int depth,
     int maxBounces
 );
+// ============= VERSIONES CON BVH (opcionales) =============
+class SceneBVH; // Forward declaration
+
+// Verifica si un punto está en sombra usando BVH
+bool estaEnSombraBVH(const Point& punto, const Direction& normal, const Light& luz, const SceneBVH& sceneBVH);
+
+// Calcula iluminación global con BVH
+Pixel calcularIluminacionGlobalBVH(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const SceneBVH& sceneBVH,
+    const Direction& wo,
+    bool incluirIndirecta,
+    int depth,
+    int maxBounces
+);
+
+// Calcula rebote indirecto con BVH
+Pixel calcularReboteIndirectoBVH(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const SceneBVH& sceneBVH,
+    const std::vector<Light>& lights,
+    int depth,
+    int maxBounces
+);

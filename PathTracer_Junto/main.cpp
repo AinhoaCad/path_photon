@@ -4,6 +4,8 @@
 #include "Primitive.hpp"
 #include "Material.hpp"
 #include "Triangle.hpp"
+#include "SceneBVH.hpp"
+#include "OBJLoader.hpp"
 
 
 Scene createCornellBox() {
@@ -142,6 +144,37 @@ Scene createCornellBoxConMalla() {
     return scene;
 }
 
+Scene createCornellBoxConMallaOBJ(const std::string& objFilePath) {
+    Scene scene;
+
+    // Paredes
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse));  // techo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
+
+    // Luz puntual centrada
+    scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+    // Cargar malla desde archivo OBJ
+    // Parámetros: archivo, material, escala, traslación
+    bool success = OBJLoader::loadOBJ(
+        objFilePath,
+        scene,
+        purpleDiffuse,                      // Material
+        Vector3(0.5f, 0.5f, 0.5f),         // Escala
+        Vector3(0.0f, -0.5f, 0.0f)         // Traslación
+    );
+
+    if (!success) {
+        std::cerr << "[ESCENA] Advertencia: No se pudo cargar el archivo OBJ " << objFilePath << std::endl;
+        std::cerr << "[ESCENA] La escena estará vacía salvo las paredes." << std::endl;
+    }
+
+    std::cout << "Cornell Box con malla OBJ creada." << std::endl;
+    return scene;
+}
 
 
 Camera CameraConfiguration(int width, int height) {
@@ -219,8 +252,9 @@ int main(int argc, char** argv) {
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
     Scene CornellBoxConMalla = createCornellBoxConMalla();
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("cubo_piramide.obj");
 
-    scene = CornellBoxConMalla; // Escena principal: Cornell con malla de triángulos
+    scene = CornellBoxConMallaOBJ; // Escena principal: Cornell con malla de triángulos
 
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
@@ -281,6 +315,42 @@ int main(int argc, char** argv) {
     image5.curvaGamma(1.0f/1.5f);
 
     image5.writePPM(outputFile);
+
+
+    //--------------------------------------------------------------
+    // IMAGEN 6: Séptima imagen con BVH, luz, rebotes y modificaciones
+    //--------------------------------------------------------------
+    
+    std::cout << "\n[BVH] Creando escena con aceleración BVH...\n";
+    
+    // Crear instancia de SceneBVH con la misma escena
+    SceneBVH sceneBVH(scene);
+    
+    std::cout << "[BVH] Construyendo imagen con BVH...\n";
+    
+    // Generar imagen usando BVH
+    Image imageBVH = camera.generateImageWithLightingBVH(
+        sceneBVH,
+        scene.getLights(),
+        numRays,
+        maxBounces
+    );
+    
+    // Aplicar las mismas modificaciones
+    imageBVH.clampPixels();
+    imageBVH.curvaGamma(1.0f/1.5f);
+    
+    // Guardar con sufijo "_BVH" para diferenciar
+    std::string outputFileBVH = outputFile;
+    size_t dotPos = outputFileBVH.find_last_of(".");
+    if (dotPos != std::string::npos) {
+        outputFileBVH.insert(dotPos, "_BVH");
+    } else {
+        outputFileBVH += "_BVH";
+    }
+    
+    imageBVH.writePPM(outputFileBVH);
+    std::cout << "[BVH] Imagen guardada en: " << outputFileBVH << "\n";
 
 
     //--------------------------------------------------------------

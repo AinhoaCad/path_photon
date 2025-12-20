@@ -7,14 +7,19 @@ pdf
 -----gamma 1/2.2
 
 
------------------------------------
-20 de noviembre
 
-TO DO:
+---------------------------------------------
+20 de diciembre
 
-- Ver funcion de Light de calcular BSDF y ver por que usamops Fresnel
--Ver lo del Halo Negro en Dielectrico
-- Ver lo de los puntos blancos en la luz del techo
-- Ver lo del formato de salida de la imagen si lo podemos conservar
-- Mirar lo de que devuelva potencia y ya cuando coca con objeto emisor -> samplePointOnArea
-- Reformular refract como en diapos
+TO DO 
+
+----------------GLOBAL / PATH -----------------------------
+- Formato de la imagen
+- Caústicas
+- Repasar refract como en las diapos
+
+----------------PHOTON-----------------------------------
+- Photonmapping repaso tocho
+
+---------------MALLAS_TRIANGULOS-------------------------
+- Preguntar librerias mallas triangulos y repaso del BVH
