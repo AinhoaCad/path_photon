@@ -16,10 +16,6 @@ TO DO
 ----------------GLOBAL / PATH -----------------------------
 - Formato de la imagen
 - Caústicas
-- Repasar refract como en las diapos
 
 ----------------PHOTON-----------------------------------
 - Photonmapping repaso tocho
-
----------------MALLAS_TRIANGULOS-------------------------
-- Preguntar librerias mallas triangulos y repaso del BVH
