@@ -10,6 +10,7 @@
 #include "SceneEmbree.hpp"
 #endif
 #include "OBJLoader.hpp"
+#include "Tonemapping.hpp"
 
 
 Scene createCornellBox() {
@@ -254,7 +255,7 @@ int main(int argc, char** argv) {
     Scene CornellBoxConMalla = createCornellBoxConMalla();
     Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
 
-    scene = CornellBoxConMallaOBJ; // Escena principal: Cornell con malla de triángulos
+    scene = CornellBoxMaterialesRaros; // Escena principal: Cornell con malla de triángulos
 
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
@@ -307,7 +308,7 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
-    /*
+    
     auto startLinear = std::chrono::steady_clock::now();
 
     Image image5 = camera.generateImageWithLightingMultipleRaysConRebotes(
@@ -320,15 +321,15 @@ int main(int argc, char** argv) {
     auto endLinear = std::chrono::steady_clock::now();
 
     //Modificaciones
-    image5.clampPixels();
-    image5.curvaGamma(1.0f/1.5f);
+    Tonemapping::clampPixels(image5);
+    Tonemapping::curvaGamma(image5, 1.0f/1.5f);
 
-    image5.writePPM(outputFile);
+    image5.write(outputFile);
 
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
-    std::cout << "[T] Path tracing sin BVH: " << linearMs / 1000.0 << " s\n";
+    std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
 
-    */
+    
     //--------------------------------------------------------------
     // IMAGEN 6: Séptima imagen con BVH, luz, rebotes y modificaciones y BVH MANUAL
     //--------------------------------------------------------------
@@ -353,8 +354,8 @@ int main(int argc, char** argv) {
     auto endBVH = std::chrono::steady_clock::now();
     
     // Aplicar las mismas modificaciones
-    imageBVH.clampPixels();
-    imageBVH.curvaGamma(1.0f/1.5f);
+    Tonemapping::clampPixels(imageBVH);
+    Tonemapping::curvaGamma(imageBVH, 1.0f/1.5f);
     
     // Guardar con sufijo "_BVH" para diferenciar
     std::string outputFileBVH = outputFile;
@@ -365,11 +366,13 @@ int main(int argc, char** argv) {
         outputFileBVH += "_BVH";
     }
     
-    imageBVH.writePPM(outputFileBVH);
+    imageBVH.write(outputFileBVH);
     auto bvhMs = std::chrono::duration_cast<std::chrono::milliseconds>(endBVH - startBVH).count();
     std::cout << "[T] Path tracing con BVH: " << bvhMs / 1000.0 << " s\n";
     std::cout << "[BVH] Imagen guardada en: " << outputFileBVH << "\n";
     */
+
+    /*
 
 #ifdef USE_EMBREE
     //--------------------------------------------------------------
@@ -392,8 +395,8 @@ int main(int argc, char** argv) {
 
     auto endEmbree = std::chrono::steady_clock::now();
 
-    imageEmbree.clampPixels();
-    imageEmbree.curvaGamma(1.0f/1.5f);
+    Tonemapping::clampPixels(imageEmbree);
+    Tonemapping::curvaGamma(imageEmbree, 1.0f/1.5f);
 
     std::string outputFileEmbree = outputFile;
     size_t dotPosEmbree = outputFileEmbree.find_last_of(".");
@@ -403,11 +406,12 @@ int main(int argc, char** argv) {
         outputFileEmbree += "_Embree";
     }
 
-    imageEmbree.writePPM(outputFileEmbree);
+    imageEmbree.write(outputFileEmbree);
     auto embreeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endEmbree - startEmbree).count();
     std::cout << "[T] Path tracing con Embree: " << embreeMs / 1000.0 << " s\n";
     std::cout << "[Embree] Imagen guardada en: " << outputFileEmbree << "\n";
 #endif
+*/
 
 
     //--------------------------------------------------------------
