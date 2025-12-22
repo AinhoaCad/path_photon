@@ -7,6 +7,9 @@
 #include "Plane.hpp"
 #include "Renderizador.hpp"
 #include "SceneBVH.hpp"
+#ifdef USE_EMBREE
+#include "SceneEmbree.hpp"
+#endif
 #include <ctime> // Para usar srand
 #include <cstdlib> // Para generar números aleatorios
 
@@ -294,5 +297,58 @@ Image Camera::generateImageWithLightingBVH(
 
     return image;
 }
+
+#ifdef USE_EMBREE
+// Versión acelerada con Embree (triángulos) + fallback analítico
+Image Camera::generateImageWithLightingEmbree(
+    const SceneEmbree& sceneEmbree,
+    const std::vector<Light>& lights,
+    int numRays,
+    int maxBounces
+) {
+    Image image(pixelWidth, pixelHeight);
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    for (int y = 0; y < pixelHeight; ++y) {
+        for (int x = 0; x < pixelWidth; ++x) {
+            Pixel acumulado = {0, 0, 0};
+
+            for (int r = 0; r < numRays; ++r) {
+                Ray ray = generateRay(y, x, true);
+
+                Interseccion inter = sceneEmbree.intersect(ray);
+
+                Pixel color = {0, 0, 0};
+
+                if (inter.hayInterseccion && inter.primitiva) {
+                    Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+
+                    color = calcularIluminacionGlobalEmbree(
+                        inter,
+                        lights,
+                        sceneEmbree,
+                        wo,
+                        true,
+                        0,
+                        maxBounces
+                    );
+                }
+
+                acumulado.r += color.r;
+                acumulado.g += color.g;
+                acumulado.b += color.b;
+            }
+
+            acumulado.r /= numRays;
+            acumulado.g /= numRays;
+            acumulado.b /= numRays;
+
+            image.setPixel(y, x, acumulado);
+        }
+    }
+
+    return image;
+}
+#endif
 
 

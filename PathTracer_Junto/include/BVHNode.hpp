@@ -11,5 +11,9 @@ public:
     std::vector<Primitive*> primitives;
 
     BVHNode(std::vector<Primitive*>& objects, int depth = 0);
+    ~BVHNode() {
+        delete left;
+        delete right;
+    }
     bool intersect(Ray& ray, float& t, Primitive*& hit) const;
 };

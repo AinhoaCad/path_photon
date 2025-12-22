@@ -1,10 +1,14 @@
 #include <iostream>
+#include <chrono>
 #include "Scene.hpp"
 #include "Camara.hpp"
 #include "Primitive.hpp"
 #include "Material.hpp"
 #include "Triangle.hpp"
 #include "SceneBVH.hpp"
+#ifdef USE_EMBREE
+#include "SceneEmbree.hpp"
+#endif
 #include "OBJLoader.hpp"
 
 
@@ -201,10 +205,6 @@ int main(int argc, char** argv) {
     int maxBounces = 12; // Número máximo de rebotes de luz
     Scene scene;
 
-    //Parámetros de Renderizado del Photon Mapping
-    const int PM_N_PHOTONS_SEARCH = 50;     
-    const float PM_MAX_RADIUS = 0.5f; 
-
     //número de muestras, alto, ancho y nombre de archivo por línea de comandos
     if (argc != 5) {
         std::cout << "Uso: " << argv[0]
@@ -252,7 +252,7 @@ int main(int argc, char** argv) {
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
     Scene CornellBoxConMalla = createCornellBoxConMalla();
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("cubo_piramide.obj");
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
 
     scene = CornellBoxConMallaOBJ; // Escena principal: Cornell con malla de triángulos
 
@@ -307,8 +307,17 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
+    /*
+    auto startLinear = std::chrono::steady_clock::now();
 
-    Image image5 = camera.generateImageWithLightingMultipleRaysConRebotes(scene.getPrimitives(), scene.getLights(), numRays, maxBounces);
+    Image image5 = camera.generateImageWithLightingMultipleRaysConRebotes(
+        scene.getPrimitives(),
+        scene.getLights(),
+        numRays,
+        maxBounces
+    );
+
+    auto endLinear = std::chrono::steady_clock::now();
 
     //Modificaciones
     image5.clampPixels();
@@ -316,11 +325,14 @@ int main(int argc, char** argv) {
 
     image5.writePPM(outputFile);
 
+    auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
+    std::cout << "[T] Path tracing sin BVH: " << linearMs / 1000.0 << " s\n";
 
+    */
     //--------------------------------------------------------------
-    // IMAGEN 6: Séptima imagen con BVH, luz, rebotes y modificaciones
+    // IMAGEN 6: Séptima imagen con BVH, luz, rebotes y modificaciones y BVH MANUAL
     //--------------------------------------------------------------
-    
+    /*
     std::cout << "\n[BVH] Creando escena con aceleración BVH...\n";
     
     // Crear instancia de SceneBVH con la misma escena
@@ -329,12 +341,16 @@ int main(int argc, char** argv) {
     std::cout << "[BVH] Construyendo imagen con BVH...\n";
     
     // Generar imagen usando BVH
+    auto startBVH = std::chrono::steady_clock::now();
+
     Image imageBVH = camera.generateImageWithLightingBVH(
         sceneBVH,
         scene.getLights(),
         numRays,
         maxBounces
     );
+
+    auto endBVH = std::chrono::steady_clock::now();
     
     // Aplicar las mismas modificaciones
     imageBVH.clampPixels();
@@ -350,7 +366,48 @@ int main(int argc, char** argv) {
     }
     
     imageBVH.writePPM(outputFileBVH);
+    auto bvhMs = std::chrono::duration_cast<std::chrono::milliseconds>(endBVH - startBVH).count();
+    std::cout << "[T] Path tracing con BVH: " << bvhMs / 1000.0 << " s\n";
     std::cout << "[BVH] Imagen guardada en: " << outputFileBVH << "\n";
+    */
+
+#ifdef USE_EMBREE
+    //--------------------------------------------------------------
+    // IMAGEN 7: Opción con Embree (triángulos) + fallback analítico 
+    //--------------------------------------------------------------
+    std::cout << "\n[Embree] Creando escena con aceleración Embree...\n";
+
+    SceneEmbree sceneEmbree(scene);
+
+    std::cout << "[Embree] Construyendo imagen con Embree...\n";
+
+    auto startEmbree = std::chrono::steady_clock::now();
+
+    Image imageEmbree = camera.generateImageWithLightingEmbree(
+        sceneEmbree,
+        scene.getLights(),
+        numRays,
+        maxBounces
+    );
+
+    auto endEmbree = std::chrono::steady_clock::now();
+
+    imageEmbree.clampPixels();
+    imageEmbree.curvaGamma(1.0f/1.5f);
+
+    std::string outputFileEmbree = outputFile;
+    size_t dotPosEmbree = outputFileEmbree.find_last_of(".");
+    if (dotPosEmbree != std::string::npos) {
+        outputFileEmbree.insert(dotPosEmbree, "_Embree");
+    } else {
+        outputFileEmbree += "_Embree";
+    }
+
+    imageEmbree.writePPM(outputFileEmbree);
+    auto embreeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endEmbree - startEmbree).count();
+    std::cout << "[T] Path tracing con Embree: " << embreeMs / 1000.0 << " s\n";
+    std::cout << "[Embree] Imagen guardada en: " << outputFileEmbree << "\n";
+#endif
 
 
     //--------------------------------------------------------------

@@ -76,6 +76,7 @@ Pixel calcularReboteIndirecto(
 );
 // ============= VERSIONES CON BVH (opcionales) =============
 class SceneBVH; // Forward declaration
+class SceneEmbree; // Forward declaration
 
 // Verifica si un punto está en sombra usando BVH
 bool estaEnSombraBVH(const Point& punto, const Direction& normal, const Light& luz, const SceneBVH& sceneBVH);
@@ -102,3 +103,31 @@ Pixel calcularReboteIndirectoBVH(
     int depth,
     int maxBounces
 );
+
+#ifdef USE_EMBREE
+// Verifica si un punto está en sombra usando Embree
+bool estaEnSombraEmbree(const Point& punto, const Direction& normal, const Light& luz, const SceneEmbree& sceneEmbree);
+
+// Calcula iluminación global con Embree
+Pixel calcularIluminacionGlobalEmbree(
+    const Interseccion& inter,
+    const std::vector<Light>& luces,
+    const SceneEmbree& sceneEmbree,
+    const Direction& wo,
+    bool incluirIndirecta,
+    int depth,
+    int maxBounces
+);
+
+// Calcula rebote indirecto con Embree
+Pixel calcularReboteIndirectoEmbree(
+    const Point& origen,
+    const Direction& normal,
+    const Material& material,
+    const Direction& wo,
+    const SceneEmbree& sceneEmbree,
+    const std::vector<Light>& lights,
+    int depth,
+    int maxBounces
+);
+#endif

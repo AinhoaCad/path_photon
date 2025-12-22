@@ -36,5 +36,8 @@ public:
 
     // Nuevos métodos con aceleración BVH (opcionales, no tocan los anteriores)
     Image generateImageWithLightingBVH(const class SceneBVH& sceneBVH, const std::vector<Light>& lights, int numRays, int maxBounces);
+#ifdef USE_EMBREE
+    Image generateImageWithLightingEmbree(const class SceneEmbree& sceneEmbree, const std::vector<Light>& lights, int numRays, int maxBounces);
+#endif
     
 };

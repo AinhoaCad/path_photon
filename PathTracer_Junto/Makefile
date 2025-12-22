@@ -1,46 +1,71 @@
-# Variables
+# =====================
+# Variables generales
+# =====================
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Iinclude -mconsole
+STD = -std=c++17
+WARN = -Wall
+INCLUDES = -Iinclude
+
 OBJDIR = obj
 SRCDIR = src
 BINDIR = bin
 TARGET = $(BINDIR)/pathtracer
 
-# Archivos fuente y objetos
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
-# Detectar sistema operativo
-ifeq ($(OS),Windows_NT)
-    RM = del /Q /S
-    RMDIR = rmdir /S /Q
-else
+# =====================
+# Detección de sistema
+# =====================
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Linux)
+    # ---- Linux / WSL ---- (Embree SIEMPRE activo)
+    EMBREE_INC ?= /usr/include
+    EMBREE_LIB ?= /usr/lib/x86_64-linux-gnu
+    CXXFLAGS = $(STD) $(WARN) $(INCLUDES) -O2 -DUSE_EMBREE -I$(EMBREE_INC)
+    LDFLAGS  = -L$(EMBREE_LIB) -lembree4 -ltbb
     RM = rm -f
     RMDIR = rm -rf
+    MKDIR_P = mkdir -p
+else
+    # ---- Windows ---- (Embree NO disponible)
+    CXXFLAGS = $(STD) $(WARN) $(INCLUDES) -mconsole
+    LDFLAGS  =
+    RM = del /Q /S
+    RMDIR = rmdir /S /Q
+    MKDIR_P = mkdir
 endif
 
+# =====================
 # Regla principal
+# =====================
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(OBJECTS) main.cpp -o $(TARGET)
+$(TARGET): $(OBJECTS) main.cpp
+	$(CXX) $(CXXFLAGS) $(OBJECTS) main.cpp -o $(TARGET) $(LDFLAGS)
 
-# Regla para compilar archivos .cpp
+# =====================
+# Compilación
+# =====================
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR) $(BINDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Crear directorios si no existen (Windows-friendly)
+# =====================
+# Directorios
+# =====================
 $(OBJDIR):
-	@if not exist $(OBJDIR) mkdir $(OBJDIR)
+	$(MKDIR_P) $(OBJDIR)
 
 $(BINDIR):
-	@if not exist $(BINDIR) mkdir $(BINDIR)
+	$(MKDIR_P) $(BINDIR)
 
+# =====================
 # Limpieza
+# =====================
 clean:
-	-$(RM) $(OBJDIR)\*.o
+	-$(RM) $(OBJDIR)/*.o
 	-$(RMDIR) $(OBJDIR)
 	-$(RMDIR) $(BINDIR)
 
-# Phony targets
 .PHONY: all clean
