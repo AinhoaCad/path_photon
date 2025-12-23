@@ -2,10 +2,43 @@
 #include <fstream>
 #include <cmath>
 #include <sstream>
-//#include <png.h>
+#include <algorithm>
+#include <cstdint>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <limits>
+#include <filesystem>
+// TinyEXR (header-only) + bundled miniz. Ensure include/third_party/{tinyexr.h,miniz.h} exist.
+#define TINYEXR_IMPLEMENTATION
+#define TINYEXR_USE_MINIZ 1
+#ifndef _strdup
+// Provide _strdup for compilers where it's missing
+#define _strdup strdup
+#endif
+#ifndef strnlen
+static size_t strnlen_local(const char* s, size_t max) { size_t n = 0; while (n < max && s[n] != '\0') ++n; return n; }
+#define strnlen strnlen_local
+#endif
+#ifndef strdup
+static char* strdup_local(const char* s) {
+    if (!s) return nullptr;
+    size_t len = std::strlen(s) + 1;
+    char* p = static_cast<char*>(std::malloc(len));
+    if (!p) return nullptr;
+    std::memcpy(p, s, len);
+    return p;
+}
+#define strdup strdup_local
+#ifndef _strdup
+#define _strdup strdup_local
+#endif
+#endif
+#include "third_party/miniz.h"
+#include "third_party/tinyexr.h"
 #include "Image.hpp"
-
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "third_party/stb_image.h"
 
 // Constructor por defecto
 Image::Image() {
@@ -47,118 +80,62 @@ int Image::getWidth() const {
 int Image::getHeight() const {
     return height;
 }
-
-/*bool Image::readPNG(const std::string& filename) {
-    FILE* fp = fopen(filename.c_str(), "rb");
-    if (!fp) {
-        std::cerr << "Error: no se pudo abrir PNG: " << filename << "\n";
+bool Image::readPNG(const std::string& filename) {
+    int w = 0, h = 0, n = 0;
+    unsigned char* data = stbi_load(filename.c_str(), &w, &h, &n, 3);
+    if (!data) {
+        std::cerr << "Error: no se pudo leer PNG: " << filename << "\n";
         return false;
     }
-
-    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png) return false;
-
-    png_infop info = png_create_info_struct(png);
-    if (!info) return false;
-
-    if (setjmp(png_jmpbuf(png))) return false;
-
-    png_init_io(png, fp);
-    png_read_info(png, info);
-
-    width  = png_get_image_width(png, info);
-    height = png_get_image_height(png, info);
-
-    int color_type = png_get_color_type(png, info);
-    int bit_depth  = png_get_bit_depth(png, info);
-
-    // Normalizar formatos
-    if (bit_depth == 16) png_set_strip_16(png);
-    if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png);
-    if (color_type == PNG_COLOR_TYPE_GRAY) png_set_gray_to_rgb(png);
-    if (png_get_valid(png, info, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png);
-    if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) png_set_strip_alpha(png);
-
-    png_read_update_info(png, info);
-
-    // Reservar memoria
+    width = w;
+    height = h;
     pixels = new Pixel[width * height];
-
-    std::vector<png_bytep> rows(height);
-    for (int y = 0; y < height; y++)
-        rows[y] = (png_bytep)malloc(png_get_rowbytes(png, info));
-
-    png_read_image(png, rows.data());
-
-    // Copiar datos en Pixel
-    for (int y = 0; y < height; y++) {
-        png_bytep row = rows[y];
-        for (int x = 0; x < width; x++) {
-            setPixel(x, y, Pixel{
-                row[x*3+0] / 255.0f,
-                row[x*3+1] / 255.0f,
-                row[x*3+2] / 255.0f
-            });
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            size_t idx = (static_cast<size_t>(y) * width + x) * 3;
+            Pixel p;
+            p.r = data[idx + 0] / 255.0f;
+            p.g = data[idx + 1] / 255.0f;
+            p.b = data[idx + 2] / 255.0f;
+            setPixel(x, y, p);
         }
-        free(rows[y]);
     }
-
-    fclose(fp);
-    png_destroy_read_struct(&png, &info, NULL);
-
+    stbi_image_free(data);
     return true;
 }
-
-
 bool Image::writePNG(const std::string& filename) const {
-    FILE* fp = fopen(filename.c_str(), "wb");
-    if (!fp) {
-        std::cerr << "Error: no se pudo abrir PNG para escritura: " << filename << "\n";
-        return false;
-    }
-
-    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png) return false;
-
-    png_infop info = png_create_info_struct(png);
-    if (!info) return false;
-
-    if (setjmp(png_jmpbuf(png))) return false;
-
-    png_init_io(png, fp);
-
-    // PNG tipo 8-bit RGB
-    png_set_IHDR(
-        png, info, width, height,
-        8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
-        PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
-    );
-
-    png_write_info(png, info);
-
-    // Buffer de lineas
-    std::vector<png_bytep> rows(height);
-    for (int y = 0; y < height; y++) {
-        rows[y] = (png_bytep)malloc(3 * width);
-        for (int x = 0; x < width; x++) {
+    // Convertir a RGB8
+    std::vector<unsigned char> rgb;
+    rgb.resize(static_cast<size_t>(width) * static_cast<size_t>(height) * 3);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            size_t idx = (static_cast<size_t>(y) * width + x) * 3;
             Pixel p = getPixel(x, y);
-            rows[y][3*x+0] = (unsigned char)(std::clamp(p.r, 0.0f, 1.0f) * 255);
-            rows[y][3*x+1] = (unsigned char)(std::clamp(p.g, 0.0f, 1.0f) * 255);
-            rows[y][3*x+2] = (unsigned char)(std::clamp(p.b, 0.0f, 1.0f) * 255);
+            rgb[idx + 0] = (unsigned char)(std::clamp(p.r, 0.0f, 1.0f) * 255.0f);
+            rgb[idx + 1] = (unsigned char)(std::clamp(p.g, 0.0f, 1.0f) * 255.0f);
+            rgb[idx + 2] = (unsigned char)(std::clamp(p.b, 0.0f, 1.0f) * 255.0f);
         }
     }
 
-    png_write_image(png, rows.data());
-    png_write_end(png, NULL);
+    size_t out_len = 0;
+    void* out_png = tdefl_write_image_to_png_file_in_memory_ex(rgb.data(), width, height, 3, &out_len, MZ_DEFAULT_LEVEL, 0);
+    if (!out_png || out_len == 0) {
+        std::cerr << "Error al codificar PNG en memoria: " << filename << "\n";
+        if (out_png) mz_free(out_png);
+        return false;
+    }
 
-    // Liberar memoria
-    for (int y = 0; y < height; y++) free(rows[y]);
-    fclose(fp);
-
-    png_destroy_write_struct(&png, &info);
-
+    std::ofstream ofs(filename, std::ios::binary);
+    if (!ofs) {
+        std::cerr << "Error: no se pudo abrir PNG para escritura: " << filename << "\n";
+        mz_free(out_png);
+        return false;
+    }
+    ofs.write(reinterpret_cast<const char*>(out_png), static_cast<std::streamsize>(out_len));
+    ofs.close();
+    mz_free(out_png);
     return true;
-}*/
+}
 
 
 // Escribe la imagen en un archivo en formato PPM
@@ -250,76 +227,194 @@ bool Image::readPPM(std::string filename) {
     file.close();
     return true;
 }
+ 
 
+// ============================================================================
+// MÉTODOS DE LECTURA/ESCRITURA GENÉRICOS
+// ============================================================================
 
-// Asegura que todos los valores RGB estén dentro del rango [0.0, 1.0]
-void Image::clampPixels() {
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            Pixel p = getPixel(j, i);
-            p.r = std::max(0.0f, std::min(1.0f, p.r));
-            p.g = std::max(0.0f, std::min(1.0f, p.g));
-            p.b = std::max(0.0f, std::min(1.0f, p.b));
-            setPixel(j, i, p);
-        }
+bool Image::read(const std::string& filename) {
+    // Detectar formato por extensión
+    size_t dotPos = filename.rfind('.');
+    if (dotPos == std::string::npos) {
+        std::cerr << "Error: No se puede determinar el formato del archivo: " << filename << std::endl;
+        return false;
     }
-}
-
-// Aplica ecualización de color para mejorar contraste
-void Image::ecualizacion() {
-    float minR = 1.0f, minG = 1.0f, minB = 1.0f;
-    float maxR = 0.0f, maxG = 0.0f, maxB = 0.0f;
-
-    // Encontrar mínimos y máximos
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            Pixel p = getPixel(j, i);
-            minR = std::min(minR, p.r);
-            minG = std::min(minG, p.g);
-            minB = std::min(minB, p.b);
-            maxR = std::max(maxR, p.r);
-            maxG = std::max(maxG, p.g);
-            maxB = std::max(maxB, p.b);
-        }
-    }
-
-    // Reescala los valores de color al rango [0, 1]
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            Pixel p = getPixel(j, i);
-            //Comprobamos que no se divida entre 0
-            if (maxR > minR) {
-                p.r = (p.r - minR) / (maxR - minR);
-            }
-            if (maxG > minG) {
-                p.g = (p.g - minG) / (maxG - minG);
-            }
-            if (maxB > minB) {
-                p.b = (p.b - minB) / (maxB - minB);
-            }
-            setPixel(j, i, p);
-        }
-    }
-}
-
-// Aplica corrección gamma a la imagen
-void Image::curvaGamma(float gamma) {
-    ecualizacion();
     
-    // Verifica que gamma sea mayor que cero
-    if (gamma <= 0.0f) {
-        std::cerr << "Error: El valor de gamma debe ser mayor que 0." << std::endl;
-        return;
+    std::string ext = filename.substr(dotPos);
+    
+    // Convertir a minúsculas
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    
+    if (ext == ".ppm") {
+        return readPPM(filename);
+    } else if (ext == ".pfm") {
+        return readPFM(filename);
+    } else if (ext == ".exr") {
+        return readEXR(filename);
+    } else if (ext == ".png") {
+        return readPNG(filename);
+    } else {
+        std::cerr << "Error: Formato no soportado: " << ext << std::endl;
+        return false;
+    }
+}
+
+bool Image::write(const std::string& filename) const {
+    // Detectar formato por extensión
+    size_t dotPos = filename.rfind('.');
+    if (dotPos == std::string::npos) {
+        std::cerr << "Error: No se puede determinar el formato del archivo: " << filename << std::endl;
+        return false;
+    }
+    
+    std::string ext = filename.substr(dotPos);
+    
+    // Convertir a minúsculas
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    
+    if (ext == ".ppm") {
+        return writePPM(filename);
+    } else if (ext == ".pfm") {
+        return writePFM(filename);
+    } else if (ext == ".exr") {
+        return writeEXR(filename);
+    } else if (ext == ".png") {
+        return writePNG(filename);
+    } else {
+        std::cerr << "Error: Formato no soportado: " << ext << std::endl;
+        return false;
+    }
+}
+
+// ============================================================================
+// SOPORTE PARA PFM (High Dynamic Range ASCII)
+// ============================================================================
+
+bool Image::writePFM(std::string filename) const {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo para escritura: " << filename << std::endl;
+        return false;
     }
 
-    // Aplica la curva gamma a cada píxel
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            Pixel p = getPixel(j, i);
-            p.r = std::pow(p.r, gamma);
-            p.g = std::pow(p.g, gamma);
-            p.b = std::pow(p.b, gamma);
-            setPixel(j, i, p); // Actualizar el píxel
+    // Escribir cabecera PFM
+    file << "PF\n";  // PF para RGB, Pf para escala de grises
+    file << width << " " << height << "\n";
+    file << "-1.0\n";  // -1.0 para little-endian
+
+    // Escribir datos en binario (float de 32 bits)
+    for (int j = height - 1; j >= 0; --j) {  // PFM usa orden invertido Y
+        for (int i = 0; i < width; ++i) {
+            Pixel p = getPixel(i, j);
+            file.write((char*)&p.r, sizeof(float));
+            file.write((char*)&p.g, sizeof(float));
+            file.write((char*)&p.b, sizeof(float));
         }
     }
+
+    file.close();
+    return true;
+}
+
+bool Image::readPFM(std::string filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: No se pudo abrir el archivo para lectura: " << filename << std::endl;
+        return false;
+    }
+
+    std::string magic;
+    file >> magic;
+    
+    if (magic != "PF" && magic != "Pf") {
+        std::cerr << "Error: Formato PFM no válido: " << magic << std::endl;
+        return false;
+    }
+
+    file >> width >> height;
+    
+    float endian;
+    file >> endian;
+    
+    // Saltar el newline
+    file.ignore();
+
+    pixels = new Pixel[width * height];
+
+    // Leer datos en orden inverso
+    for (int j = height - 1; j >= 0; --j) {
+        for (int i = 0; i < width; ++i) {
+            float r, g, b;
+            file.read((char*)&r, sizeof(float));
+            file.read((char*)&g, sizeof(float));
+            file.read((char*)&b, sizeof(float));
+            setPixel(i, j, Pixel{r, g, b});
+        }
+    }
+
+    file.close();
+    return true;
+}
+
+// ============================================================================
+// SOPORTE PARA EXR (TinyEXR)
+// ============================================================================
+
+bool Image::writeEXR(std::string filename) const {
+    if (width <= 0 || height <= 0) {
+        std::cerr << "Error: Dimensiones de imagen invalidas al escribir EXR" << std::endl;
+        return false;
+    }
+
+    // Construir buffer intercalado RGB con valores HDR originales
+    std::vector<float> data;
+    data.resize(static_cast<size_t>(width) * static_cast<size_t>(height) * 3);
+    for (int j = 0; j < height; ++j) {
+        for (int i = 0; i < width; ++i) {
+            size_t idx = (static_cast<size_t>(j) * width + i) * 3;
+            Pixel p = getPixel(i, j);
+            data[idx + 0] = p.r;
+            data[idx + 1] = p.g;
+            data[idx + 2] = p.b;
+        }
+    }
+
+    const char* err = nullptr;
+    int ret = SaveEXR(data.data(), width, height, 3 /*channels*/, 0 /*save_as_fp16*/, filename.c_str(), &err);
+    if (ret != TINYEXR_SUCCESS) {
+        std::cerr << "Error al escribir EXR: " << (err ? err : "desconocido") << std::endl;
+        if (err) FreeEXRErrorMessage(err);
+        return false;
+    }
+    if (err) FreeEXRErrorMessage(err);
+    return true;
+}
+
+bool Image::readEXR(std::string filename) {
+    float* out = nullptr; // RGBA intercalado
+    int w = 0, h = 0;
+    const char* err = nullptr;
+    int ret = LoadEXR(&out, &w, &h, filename.c_str(), &err);
+    if (ret != TINYEXR_SUCCESS) {
+        std::cerr << "Error al leer EXR: " << (err ? err : "desconocido") << std::endl;
+        if (err) FreeEXRErrorMessage(err);
+        return false;
+    }
+    if (err) FreeEXRErrorMessage(err);
+
+    width = w;
+    height = h;
+    pixels = new Pixel[width * height];
+
+    // TinyEXR retorna RGBA; copiamos RGB con stride 4
+    for (int j = 0; j < height; ++j) {
+        for (int i = 0; i < width; ++i) {
+            size_t idx = (static_cast<size_t>(j) * width + i) * 4;
+            setPixel(i, j, Pixel{out[idx + 0], out[idx + 1], out[idx + 2]});
+        }
+    }
+
+    free(out);
+    return true;
 }

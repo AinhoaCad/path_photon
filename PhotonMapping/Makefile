@@ -1,6 +1,6 @@
 # Variables
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Iinclude -mconsole
+CXXFLAGS = -std=c++17 -Wall -Iinclude -Iinclude/third_party -mconsole
 OBJDIR = obj
 SRCDIR = src
 BINDIR = bin

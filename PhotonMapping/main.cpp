@@ -7,6 +7,8 @@
 #include "PhotonMapper.hpp"
 #include "Photon.hpp"
 #include "Light.hpp"
+#include "Image.hpp"
+#include "Tonemapping.hpp"
 
 /**
  * Crea, configura y construye el mapa de fotones para la escena.
@@ -187,15 +189,15 @@ int main(int argc, char** argv) {
         PM_KERNEL_TYPE
     );
 
-    image.clampPixels();
-    image.curvaGamma(1.0f / 1.5f);
+    // Aplicar tone mapping
+    Tonemapping::applyToneMapping(image, ToneMappingOperator::GAMMA, 1.0f / 1.5f);
 
     // Build informative filename suffix: <base>_<Kernel>M<M>N<N>R<R>
     // Kernel: Box | Cone | Gaussian
     // Radius: print with two decimals (e.g., R1.00)
     std::string kernelName = (PM_KERNEL_TYPE == BOX ? "Box" : (PM_KERNEL_TYPE == CONE ? "Cone" : "Gaussian"));
     char suffix[64];
-    snprintf(suffix, sizeof(suffix), "_%dN%dR%.2f", kernelName.c_str(), PM_N_PHOTONS_SEARCH, PM_MAX_RADIUS);
+    snprintf(suffix, sizeof(suffix), "_%sN%dR%.2f", kernelName.c_str(), PM_N_PHOTONS_SEARCH, PM_MAX_RADIUS);
     // Insert suffix before extension
     std::string pm_name = "pm_" + outputFile;
     size_t dot = pm_name.find_last_of('.');
@@ -204,13 +206,13 @@ int main(int argc, char** argv) {
     } else {
         pm_name += suffix;
     }
-    // Ensure filename ends with .ppm
-    if (pm_name.size() < 4 || pm_name.substr(pm_name.size() - 4) != ".ppm") {
-        pm_name += ".ppm";
+    
+    // Usar el sistema de write() para elegir formato automáticamente
+    if (image.write(pm_name)) {
+        std::cout << "Imagen guardada en: " << pm_name << std::endl;
+    } else {
+        std::cerr << "Error al guardar la imagen: " << pm_name << std::endl;
     }
-    image.writePPM(pm_name);
-
-    std::cout << "Imagen guardada en: " << pm_name << std::endl;
 
     std::cout << "IMAGENES GENERADAS\n";
     return 0;
