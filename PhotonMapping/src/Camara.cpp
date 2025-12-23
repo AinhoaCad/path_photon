@@ -114,6 +114,8 @@ Image Camera::generateImageWithLightingMultipleRaysConFotones(
                 Pixel color = {0, 0, 0};
                 if (inter.hayInterseccion && inter.primitiva) {
                     Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+
+                    // shade (intersection)
                     color = calcularIluminacionGlobalConFotones(
                         inter, lights, primitives, wo,
                         photonMapper, pm_radius, pm_nPhotons,

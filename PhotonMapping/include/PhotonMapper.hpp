@@ -49,7 +49,7 @@ public:
     ~PhotonMapper();
 
     // Emisión y construcción del mapa de fotones
-    void emitPhotons(int nPhotons, float amplificationFactor = 100.0f);
+    void emitPhotons(int nPhotons);
     void buildPhotonMap();
 
     // Estimación de radiancia

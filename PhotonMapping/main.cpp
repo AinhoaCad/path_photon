@@ -15,19 +15,20 @@
  * @return PhotonMapper El objeto PhotonMapper ya construido.
  */
 
-PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces, float amplificationM) {
 
-    const int N_PHOTONS_TO_SHOOT = 100000;
-    const float M = amplificationM;
+// PASS 1 : Emisión y construcción del mapa de fotones
+PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces) {
+
+    const int N_PHOTONS_TO_SHOOT = 300000;  // Número total de fotones a emitir
     const int PM_MAX_BOUNCES = maxBounces;
 
     std::cout << "\n--- Construyendo Photon Map (Fase 1: Emision) ---\n";
     std::cout << "   Fotones a emitir = " << N_PHOTONS_TO_SHOOT << "\n"
-              << "   Factor M (amplificacion) = " << M << "\n"
               << "   Rebotes max = " << PM_MAX_BOUNCES << "\n";
 
-    PhotonMapper photonMapper(&scene);
-    photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT, M);
+    PhotonMapper photonMapper(&scene); //all_photons[]
+    // Lanzamos los fotones y hacemos el tracing
+    photonMapper.emitPhotons(N_PHOTONS_TO_SHOOT);
 
     photonMapper.buildPhotonMap();
 
@@ -131,10 +132,11 @@ int main(int argc, char** argv) {
     int maxBounces = 12;
     Scene scene;
 
-    const int PM_N_PHOTONS_SEARCH = 1000;
-    const float PM_MAX_RADIUS = 0.1f;
-    const KERNEL PM_KERNEL_TYPE = CONE;
-    const float M = 100.0f; // Amplification factor for photon flux
+    // Parámetros para Photon Mapping
+
+    const int PM_N_PHOTONS_SEARCH = 300; // k-nearest photons
+    const float PM_MAX_RADIUS = 0.05f; // Radio maximo de búsqueda
+    const KERNEL PM_KERNEL_TYPE = BOX; // Tipo de kernel
 
     if (argc != 5) {
         std::cout << "Uso: " << argv[0]
@@ -161,15 +163,19 @@ int main(int argc, char** argv) {
 
     Camera camera = CameraConfiguration(width, height);
 
-    PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces, M);
+    // PASS 1: Crear y construir el mapa de fotones
+
+    PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces);
 
     std::cout << "\n--- Renderizando con Photon Mapping ---\n";
     std::cout << "  Fotones a buscar = " << PM_N_PHOTONS_SEARCH << "\n";
     std::cout << "  Radio max = " << PM_MAX_RADIUS << "\n";
     std::cout << "  Kernel = " 
-              << (PM_KERNEL_TYPE == CONE ? "Conico" : "Box") 
+              << (PM_KERNEL_TYPE == CONE ? "Conico" : (PM_KERNEL_TYPE == GAUSSIAN ? "Gaussiano" : "Caja"))
               << "\n";
 
+
+    // PASS 2: Renderizado usando el mapa de fotones
     Image image = camera.generateImageWithLightingMultipleRaysConFotones(
         scene.getPrimitives(),
         scene.getLights(),
@@ -189,7 +195,7 @@ int main(int argc, char** argv) {
     // Radius: print with two decimals (e.g., R1.00)
     std::string kernelName = (PM_KERNEL_TYPE == BOX ? "Box" : (PM_KERNEL_TYPE == CONE ? "Cone" : "Gaussian"));
     char suffix[64];
-    snprintf(suffix, sizeof(suffix), "_%sM%dN%dR%.2f", kernelName.c_str(), (int)M, PM_N_PHOTONS_SEARCH, PM_MAX_RADIUS);
+    snprintf(suffix, sizeof(suffix), "_%dN%dR%.2f", kernelName.c_str(), PM_N_PHOTONS_SEARCH, PM_MAX_RADIUS);
     // Insert suffix before extension
     std::string pm_name = "pm_" + outputFile;
     size_t dot = pm_name.find_last_of('.');

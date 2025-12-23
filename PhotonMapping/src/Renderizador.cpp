@@ -269,25 +269,6 @@ Pixel calcularIluminacionDirecta(
 }
 
 // ------------------------------------------------------------
-// REBOTE INDIRECTO (DELTA)
-// ------------------------------------------------------------
-
-Pixel calcularReboteIndirectoConFotones(
-    const Point& origen,
-    const Direction& normal,
-    const Material& material,
-    const Direction& wo,
-    const std::vector<Primitive*>& primitives,
-    const std::vector<Light>& lights,
-    PhotonMapper* photonMapper,
-    float pm_radius,
-    int pm_nPhotons,
-    KERNEL kernelType,
-    int depth,
-    int maxBounces
-);
-
-// ------------------------------------------------------------
 // ILUMINACIÓN GLOBAL CON PHOTON MAPPING
 // ------------------------------------------------------------
 
@@ -324,12 +305,16 @@ Pixel calcularIluminacionGlobalConFotones(
     }
 
     if (depth < maxBounces) {
+        // si no es delta, estimar densidad de fotones
         if (!material.isEspejoPuro() && !material.isDielectric() && photonMapper) {
+
+            // density_estimation(intersection, nearestPhotons)
             Color indirecta_pm = photonMapper->estimateRadiance(
                 inter.punto, inter.normal, wo, material,
                 pm_radius, pm_nPhotons, kernelType
             );
 
+            
             // Debug: print first few indirect radiance samples for non-delta hits
             {
                 static int pm_debug_samples = 0;
@@ -345,6 +330,9 @@ Pixel calcularIluminacionGlobalConFotones(
                     );
                 }
             }
+            
+
+            
 
             colorTotal.r += indirecta_pm.R;
             colorTotal.g += indirecta_pm.G;
@@ -364,6 +352,7 @@ Pixel calcularIluminacionGlobalConFotones(
         }
     }
 
+    // return L
     return colorTotal;
 }
 

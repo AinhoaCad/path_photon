@@ -92,16 +92,18 @@ void PhotonMapper::buildPhotonMap() {
 // --------------------------------------------------------------------
 // Emitir fotones
 // --------------------------------------------------------------------
-void PhotonMapper::emitPhotons(int nPhotons, float amplificationFactor) {
+void PhotonMapper::emitPhotons(int nPhotons) {
     if (nPhotons <= 0) return;
 
-    photons_.clear();
+    photons_.clear(); // photon_map = empty
     const auto& lights = scene_->getLights();
     Color totalScenePower = {0, 0, 0};
     std::vector<int> pointLightIndices;
 
     extern bool hayLuzPuntual(const std::vector<Light>&);
 
+    // lights = scene.lights
+    //Ignoraremos luces de area para la emision de fotones
     if (hayLuzPuntual(lights)) {
         for (size_t i = 0; i < lights.size(); ++i) {
             if (lights[i].width == 0.0f && lights[i].height == 0.0f) {
@@ -119,19 +121,27 @@ void PhotonMapper::emitPhotons(int nPhotons, float amplificationFactor) {
     if (pointLightIndices.empty()) return;
 
     // Amplify per-photon flux to make indirect visible (tuning factor)
-    const float M = amplificationFactor;
-    std::cout << "Emitiendo " << nPhotons << " fotones (M=" << M << ")..." << std::endl;
-    Color fluxPerPhoton(
-        (totalScenePower.R / nPhotons) * M,
-        (totalScenePower.G / nPhotons) * M,
-        (totalScenePower.B / nPhotons) * M
-    );
+    std::cout << "Emitiendo " << nPhotons << std::endl;
 
+    // Calculo del flujo por foton (NOSOTROS LO HACEMOS COMO (TOTAL_POWER/N)*M) fisicamente solo seria TOTAL_POWER/N
+    Color fluxPerPhoton(
+        (totalScenePower.R / nPhotons) * 4 * M_PI,
+        (totalScenePower.G / nPhotons) * 4 * M_PI,
+        (totalScenePower.B / nPhotons) * 4 * M_PI
+    );
+    
+    //sampleo de rayos
     for (int i = 0; i < nPhotons; ++i) {
+
+        // choose light
         int lightIdx = pointLightIndices[rand() % pointLightIndices.size()];
         const Light& light = lights[lightIdx];
+
+        // sample outgoing direction
         Direction dir = Operations::sampleUniformSphereDirection();
         Ray photonRay(light.origen.toVector(), dir.toVector());
+
+        // trace photon
         tracePhoton(photonRay, fluxPerPhoton, 0);
     }
 }
@@ -140,29 +150,47 @@ void PhotonMapper::emitPhotons(int nPhotons, float amplificationFactor) {
 // Trazado de fotón
 // --------------------------------------------------------------------
 void PhotonMapper::tracePhoton(Ray& ray, Color currentFlux, int depth) {
-    if (depth >= MAX_PHOTON_DEPTH) return;
+    // Condiciones de parada
 
-    if (std::max({currentFlux.R, currentFlux.G, currentFlux.B}) < MIN_FLUX) return;
+    if (depth >= MAX_PHOTON_DEPTH) return; // if depth > maxDepth: stop
 
+    if (std::max({currentFlux.R, currentFlux.G, currentFlux.B}) < MIN_FLUX) return; // if flux too small: stop
+
+    // hit = intersect(ray)
     InterseccionData inter = calcularInterseccionMasCercana_PM(ray, scene_->getPrimitives());
+
+    // if no hit: stop
+    // if hit light: stop
     if (!inter.hayInterseccion || inter.primitiva->emitsLight()) return;
 
     const Material& material = inter.primitiva->getMaterial();
 
     Direction nextDir;
     Color throughput;
+    
+    // wi -> sample wo from BRDF
+    //throughput = fr * cos / pdf      throughput es el peso del rebote
 
     samplePhotonDirection(material, inter.normal, ray.direction_.toDirection(), nextDir, throughput);
 
+    // Russian Roulette
+
     if (depth > 0) { 
-        float p_continue = std::max({throughput.R, throughput.G, throughput.B}); 
+        // if rand() > p: terminate
+        float p_continue = std::max({throughput.R, throughput.G, throughput.B});
+        // Clamp to [0,1] to be a valid probability
+        if (p_continue < 0.0f) p_continue = 0.0f;
+        if (p_continue > 1.0f) p_continue = 1.0f;
         if (p_continue <= 1e-6f) return;
         if ((float)rand() / RAND_MAX > p_continue) return;
+
+        // flux /= p
         currentFlux.R /= p_continue;
         currentFlux.G /= p_continue;
         currentFlux.B /= p_continue;
     }
 
+    // if not IS_DELTA: store photon
     if (!material.isEspejoPuro() && !material.isDielectric()) {
         if (depth > 0) {
             Photon p;
@@ -172,11 +200,13 @@ void PhotonMapper::tracePhoton(Ray& ray, Color currentFlux, int depth) {
             photons_.push_back(p);
         }
     }
-
+    
+    // flux *= throughput
     currentFlux.R *= throughput.R;
     currentFlux.G *= throughput.G;
     currentFlux.B *= throughput.B;
-
+    
+    // trace_photon(next_ray)
     Point nextOrigin = Operations::add(inter.punto, Operations::mult(nextDir, 0.001f));
     Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
     tracePhoton(nextRay, currentFlux, depth + 1);
@@ -194,44 +224,86 @@ Color PhotonMapper::estimateRadiance(
     int nPhotonsToFind,
     KERNEL kernelType
 ) const {
+
+
+    // Resultado final: radiancia indirecta L_r(x, wo)
     Color L_indirect = {0, 0, 0};
+
+    // Posición del punto de shading en formato vector
     Vector3 searchPos = p.toVector();
 
-    if (!map_) return L_indirect;
+    if (!map_) return L_indirect; // Si no existe mapa de fotones, no hay iluminación indirecta
 
+    // ------------------------------------------------------------
+    // 1) BÚSQUEDA DE FOTONES CERCANOS (k-nearest neighbors)
+    // ------------------------------------------------------------
+
+    // Devuelve hasta k fotones dentro de maxRadius
     auto foundPtrs = map_->nearest_neighbors(searchPos, nPhotonsToFind, maxRadius);
+
+    // Si no se encuentra ningún fotón, no hay contribución indirecta
     if (foundPtrs.empty()) return L_indirect;
 
-    float finalRadiusSq = 0.0f;
-    Color totalFlux = {0, 0, 0};
-    Color kd_BRDF(material.kd.R, material.kd.G, material.kd.B); 
+    // ------------------------------------------------------------
+    // 2) CÁLCULO DEL RADIO FINAL R (distancia al fotón más lejano)
+    // ------------------------------------------------------------
 
+    float finalRadiusSq = 0.0f;
+
+    // Acumulador del numerador del estimador de densidad
+    Color totalFlux = {0, 0, 0};
+
+    // BRDF difusa (Lambert): f_r = kd / π
+    Color kd_BRDF(material.kd.R / M_PI, material.kd.G / M_PI, material.kd.B / M_PI); 
+
+    // Recorremos los fotones encontrados para calcular R^2
     for (const auto& photonPtr : foundPtrs) {
         const Photon& photon = *photonPtr;
+
+        // Distancia al punto de shading
         Vector3 diff = Operations::sub(p, Point(photon.position)).toVector();
         float distSq = Operations::dot(diff.toDirection(), diff.toDirection());
+
+        // Guardamos la mayor distancia (radio del disco de estimación)
         if (distSq > finalRadiusSq) finalRadiusSq = distSq;
     }
 
+    // ------------------------------------------------------------
+    // 3) SUMA DE CONTRIBUCIONES DE CADA FOTÓN
+    // ------------------------------------------------------------
+
     for (const auto& photonPtr : foundPtrs) {
         const Photon& photon = *photonPtr;
+
+        // Distancia del fotón al punto x
         Vector3 diff = Operations::sub(p, Point(photon.position)).toVector();
         float distSq = Operations::dot(diff.toDirection(), diff.toDirection());
         float dist = std::sqrt(distSq);
-        Direction wi = photon.directionIncidente.toDirection();
-        float cos_theta = Operations::dot(wi, normal);
-        if (cos_theta <= 1e-6f) continue;
 
+        // Dirección incidente del fotón (ω_i): el fotón viaja con dirección ω_p
+        // Para el coseno de incidencia usamos n · (-ω_p)
+        Direction wi = Operations::mult(photon.directionIncidente.toDirection(), -1.0f);
+
+        // Término coseno: n · (-ω_p)
+        float cos_theta = Operations::dot(wi, normal);  // contribución
+        if (cos_theta <= 1e-6f) continue; // descarta fotones por detrás
+
+
+        // --------------------------------------------------------
+        // 4) KERNEL ESPACIAL K(r / R)
+        // --------------------------------------------------------
         float weight = 1.0f;
         float radius = std::sqrt(finalRadiusSq);
 
         switch (kernelType) {
+            // conico 
             case CONE: {
                 float k = 2.0f;
                 float wpc = 1.0f - dist / (k * radius);
                 weight = std::max(0.0f, wpc);
                 break;
             }
+            // gaussiano
             case GAUSSIAN: {
                 float alpha = 0.918f;
                 float beta = 1.953f;
@@ -239,24 +311,36 @@ Color PhotonMapper::estimateRadiance(
                 weight = alpha * (1.0f - ((1.0f - expf(-beta * (distSq / (2.0f * R_sq)))) / (1.0f - expf(-beta))));
                 break;
             }
+            // caja
             case BOX:
             default:
                 weight = 1.0f;
                 break;
         }
 
+        // --------------------------------------------------------
+        // 5) CONTRIBUCIÓN DE UN FOTÓN
+        // --------------------------------------------------------
+        // Φ_p · f_r · cosθ · K(r / R)
         Color photon_contribution(
             kd_BRDF.R * photon.flux.r * cos_theta * weight,
             kd_BRDF.G * photon.flux.g * cos_theta * weight,
             kd_BRDF.B * photon.flux.b * cos_theta * weight
         );
-
+        
+        // Acumulamos el numerador del estimador
         totalFlux.R += photon_contribution.R;
         totalFlux.G += photon_contribution.G;
         totalFlux.B += photon_contribution.B;
     }
 
+    // ------------------------------------------------------------
+    // 6) NORMALIZACIÓN DEL ESTIMADOR DE DENSIDAD
+    // ------------------------------------------------------------
+
     float finalRadius = std::sqrt(finalRadiusSq);
+
+    
     // Debug: print found photon count and final radius for first few queries
     {
         static int pm_query_debug = 0;
@@ -270,14 +354,26 @@ Color PhotonMapper::estimateRadiance(
                 foundPtrs.size(), finalRadius, maxRadius, nPhotonsToFind);
         }
     }
+    
+
+    // Área del disco de estimación: πR²
     float area = M_PI * finalRadius * finalRadius;
-    float normalization_factor = 1.0f / (area * float(M_PI)); 
+
+    // Normalización básica:
+    // Ecuación de photon mapping: L_r(x, wo) = Σ(Φ_p · f_r · cos(θ) · K(r/R)) / (π·R²)
+    // La BRDF difusa ya incluye 1/π: f_r = kd/π
+    // Por tanto: normalization_factor = 1 / (π·R²)
+
+    float normalization_factor = 1.0f / area; 
 
     if (kernelType == CONE) {
         float k = 2.0f;
-        normalization_factor = 1.0f / (area * (1.0f - (2.0f / (3.0f * k))) * float(M_PI));
+        normalization_factor = 1.0f / (area * (1.0f - (2.0f / (3.0f * k))));
     }
 
+    // ---------------------------------------------------------------------
+    // 7) RESULTADO FINAL: RADIANCIA INDIRECTA = Σ(Φ_p · f_r · cos(θ) · K(r/R)) / (π·R²)
+    // ---------------------------------------------------------------------
     L_indirect.R = totalFlux.R * normalization_factor;
     L_indirect.G = totalFlux.G * normalization_factor;
     L_indirect.B = totalFlux.B * normalization_factor;
@@ -341,21 +437,93 @@ void PhotonMapper::samplePhotonDirection(
     }
 
     if (material.isPlastic()) {
-        float Ed = std::max({material.kd.R, material.kd.G, material.kd.B});
-        float Es = std::max({material.ks.R, material.ks.G, material.ks.B});
+        float Ed = std::max({material.kd.R, material.kd.G, material.kd.B}); // reflectancia difusa
+        float Es = std::max({material.ks.R, material.ks.G, material.ks.B}); // reflectancia especular
         float sum = Ed + Es;
         if (sum <= 0.0f) sum = 1.0f;
         float Pd = Ed / sum;
         float xi = static_cast<float>(rand()) / RAND_MAX;
 
         if (xi < Pd) {
+            // Difuso: muestreo hemisferio con coseno -> pdf = cos/π
             nextDir = Operations::randomHemisphereDirection(normal);
-            throughput = material.kd;
+            // throughput = fr * cos / pdf / P(sel) -> (kd/π) * cos / (cos/π) / Pd = kd / Pd
+            float denom = (Pd < 1e-6f) ? 1e-6f : Pd;
+            throughput = Color(material.kd.R / denom, material.kd.G / denom, material.kd.B / denom);
+
+            // Debug: verificar throughput = fr * cos / (pdf_total)
+            {
+                static int thr_dbg = 0;
+                if (thr_dbg < 5) {
+                    float cosTheta = std::max(0.0f, Operations::dot(Operations::norm(nextDir), Operations::norm(normal)));
+                    float pdf_cond = cosTheta / float(M_PI);         // pdf condicional del hemisferio con coseno
+                    float pdf_total = Pd * pdf_cond;                  // pdf total con selección de lóbulo
+                    if (cosTheta > 1e-5f && pdf_total > 1e-6f) {
+                        Color fr(material.kd.R / float(M_PI), material.kd.G / float(M_PI), material.kd.B / float(M_PI));
+                        Color expected(
+                            fr.R * cosTheta / pdf_total,
+                            fr.G * cosTheta / pdf_total,
+                            fr.B * cosTheta / pdf_total
+                        );
+                        fprintf(stderr,
+                            "Plastic diffuse throughput: cos=%.3f pdf_total=%.5f expected=(%.3f, %.3f, %.3f) actual=(%.3f, %.3f, %.3f)\n",
+                            cosTheta, pdf_total,
+                            expected.R, expected.G, expected.B,
+                            throughput.R, throughput.G, throughput.B
+                        );
+                        thr_dbg++;
+                    }
+                }
+            }
         } else {
+            // Especular: delta -> pdf = 1, throughput = ks / (1 - Pd)
             nextDir = Operations::reflect(incident, normal);
-            throughput = material.ks;
+            float Ps = 1.0f - Pd;
+            float denom = (Ps < 1e-6f) ? 1e-6f : Ps;
+            throughput = Color(material.ks.R / denom, material.ks.G / denom, material.ks.B / denom);
+
+            // Debug: verificar throughput especular con selección de lóbulo
+            {
+                static int thr_dbg_s = 0;
+                if (thr_dbg_s < 3) {
+                    float pdf_total = std::max(1e-6f, (1.0f - Pd));   // delta: pdf condicional = 1, pdf total = Ps
+                    Color fr = material.ks;                            // BRDF especular ideal tratada como delta con energía ks
+                    Color expected(fr.R / pdf_total, fr.G / pdf_total, fr.B / pdf_total);
+                    fprintf(stderr,
+                        "Plastic specular throughput: pdf_total=%.5f expected=(%.3f, %.3f, %.3f) actual=(%.3f, %.3f, %.3f)\n",
+                        pdf_total,
+                        expected.R, expected.G, expected.B,
+                        throughput.R, throughput.G, throughput.B
+                    );
+                    thr_dbg_s++;
+                }
+            }
         }
         return;
+    }
+
+    // Debug: para material difuso puro (no plástico), comprobar fr*cos/pdf del hemisferio con coseno
+    {
+        static int thr_dbg_diffuse = 0;
+        if (thr_dbg_diffuse < 3 && !material.isEspejoPuro() && !material.isDielectric() && !material.isPlastic()) {
+            float cosTheta = std::max(0.0f, Operations::dot(Operations::norm(nextDir), Operations::norm(normal)));
+            float pdf = cosTheta / float(M_PI);
+            if (cosTheta > 1e-5f && pdf > 1e-6f) {
+                Color fr(material.kd.R / float(M_PI), material.kd.G / float(M_PI), material.kd.B / float(M_PI));
+                Color expected(
+                    fr.R * cosTheta / pdf,
+                    fr.G * cosTheta / pdf,
+                    fr.B * cosTheta / pdf
+                );
+                fprintf(stderr,
+                    "Diffuse throughput: cos=%.3f pdf=%.5f expected=(%.3f, %.3f, %.3f) actual=(%.3f, %.3f, %.3f)\n",
+                    cosTheta, pdf,
+                    expected.R, expected.G, expected.B,
+                    throughput.R, throughput.G, throughput.B
+                );
+                thr_dbg_diffuse++;
+            }
+        }
     }
 
     nextDir = Operations::randomHemisphereDirection(normal);
