@@ -87,10 +87,6 @@ InterseccionData calcularInterseccionMasCercana(Ray& ray, const std::vector<Prim
             Operations::mult(ray.direction_.toDirection(), inter.t)
         );
         inter.normal = inter.primitiva->getPointNormal(inter.punto);
-
-        if (Operations::dot(inter.normal, ray.direction_.toDirection()) > 0) {
-            inter.normal = Operations::mult(inter.normal, -1.0f);
-        }
     }
 
     return inter;
@@ -389,6 +385,7 @@ Pixel calcularReboteIndirectoConFotones(
 
     float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
 
+    // Russian Roulette para caminos especulares muy largos
     if (depth > 2) {
         float xi = float(rand()) / RAND_MAX;
         if (xi > maxWeight) return {0, 0, 0};
@@ -413,6 +410,7 @@ Pixel calcularReboteIndirectoConFotones(
         else {
             Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
 
+            // Llamar a la función completa que incluye luz directa y photon mapping
             Pixel rec = calcularIluminacionGlobalConFotones(
                 inter, lights, primitives, newWo,
                 photonMapper, pm_radius, pm_nPhotons, kernelType,

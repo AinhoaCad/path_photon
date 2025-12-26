@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Escenas creadas.\n";
 
-    scene = CornellBoxBasica;
+    scene = CornellBoxMaterialesRaros;
 
     Camera camera = CameraConfiguration(width, height);
 
