@@ -228,13 +228,13 @@ void muestrearDireccionRebote(
     // ---------------- Dieléctrico ----------------
     if (material.isDielectric()) {
 
-        //ver donde refleja
+        // La función refract ahora maneja internamente el ajuste de normal y eta
+        // Solo necesitamos pasar la normal original y los índices base
         Direction n = normal;
         bool entering = (Operations::dot(incident, n) < 0.0f);
-        if (!entering) n = Operations::mult(n, -1.0f);
-
-        float etaI = entering ? 1.0f : material.ior;
-        float etaT = entering ? material.ior : 1.0f;
+        
+        float etaI = 1.0f;           // Índice del aire
+        float etaT = material.ior;   // Índice del material
 
         Vector3 refracted;
         // Intenta refracción (necesario para detectar TIR)
@@ -242,9 +242,10 @@ void muestrearDireccionRebote(
 
         if (!canRefract) {
             // --- REFLEXIÓN INTERNA TOTAL (TIR) ---
-            nextDir = Operations::reflect(incident, n);
+            Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
+            nextDir = Operations::reflect(incident, reflectNormal);
             weight = material.ks; // Usamos k_s como peso reflejado
-            isDelta = true;       // CORREGIDO: Es un rebote perfectamente especular (DELTA)
+            isDelta = true;
             return;
         }
 
@@ -263,7 +264,8 @@ void muestrearDireccionRebote(
 
         if (xi < Pr) {
             // --- REFLEXIÓN (comportamiento igual que espejo)---
-            nextDir = Operations::reflect(incident, n);
+            Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
+            nextDir = Operations::reflect(incident, reflectNormal);
             // Weight = k_s / P_r
             weight = Color(
                 material.ks.R / std::max(Pr, 1e-6f),
@@ -273,8 +275,9 @@ void muestrearDireccionRebote(
         } else {
             // --- REFRACCIÓN ---
             nextDir = refracted;
-            float etaRatio = etaI / etaT;
-            // CORREGIDO: Usamos la corrección por cambio de fase (etaI/etaT)^2
+            // Determinar la dirección del cambio de medio
+            float etaRatio = entering ? (etaI / etaT) : (etaT / etaI);
+            // Corrección por cambio de fase (eta_i/eta_t)^2
             float etaCorr = etaRatio * etaRatio; 
             // Weight = (k_t * Corrección_eta) / P_t
             weight = Color(
@@ -383,80 +386,6 @@ Pixel calcularIluminacionDirecta(
     return color;
 }
 
-/*Pixel calcularIluminacionDirecta(
-    const Point& origen,
-    const Direction& normal,
-    const Material& material,
-    const Direction& wo,
-    const std::vector<Primitive*>& primitives,
-    const std::vector<Light>& lights
-) {
-    Pixel color{0,0,0};
-
-    // No iluminación directa para espejos o dieléctricos
-    if (material.isEspejoPuro() || material.isDielectric()) return color;
-
-    for (const auto& luz : lights) {
-        Pixel acum{0,0,0};
-        int numMuestras = 16; // número de muestras para luz de área
-
-        // Si la luz es puntual, solo 1 muestra
-        if (luz.width <= 0.0f || luz.height <= 0.0f) numMuestras = 1;
-
-        for (int i = 0; i < numMuestras; ++i) {
-            Point lightSample = luz.origen;
-            if (numMuestras > 1) {
-                // Muestreo dentro de la luz de área
-                float xi1 = static_cast<float>(rand()) / RAND_MAX;
-                float xi2 = static_cast<float>(rand()) / RAND_MAX;
-                lightSample = luz.samplePointOnArea(xi1, xi2);
-            }
-
-            // Rayo de sombra
-            Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-            Direction toLight = Operations::sub(lightSample, shadowOrigin);
-            float dist = Operations::mod(toLight);
-            toLight = Operations::norm(toLight);
-            Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
-
-            bool inShadow = false;
-            for (auto& prim : primitives) {
-                float t;
-                if (prim->intersect(shadowRay, t) && t > 0.001f && t < dist) {
-                    inShadow = true;
-                    break;
-                }
-            }
-            if (inShadow) continue;
-
-            // Contribución de luz
-            Pixel contrib = (numMuestras > 1)
-                ? luz.calcularLuzAreaSample(origen, normal, material.toPixel(), lightSample)
-                : luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
-
-            // Limitar valores extremos para evitar fireflies
-            contrib.r = std::min(contrib.r, 10.0f);
-            contrib.g = std::min(contrib.g, 10.0f);
-            contrib.b = std::min(contrib.b, 10.0f);
-
-            acum.r += contrib.r;
-            acum.g += contrib.g;
-            acum.b += contrib.b;
-        }
-
-        // Promediar las muestras
-        acum.r /= numMuestras;
-        acum.g /= numMuestras;
-        acum.b /= numMuestras;
-
-        // Añadir al color total
-        color.r += acum.r * material.kd.R;
-        color.g += acum.g * material.kd.G;
-        color.b += acum.b * material.kd.B;
-    }
-
-    return color;
-}*/
 
 
 // ---------------- Rebote indirecto ----------------
@@ -508,15 +437,6 @@ Pixel calcularReboteIndirecto(
             indirecto.r = rec.r * weight.R;
             indirecto.g = rec.g * weight.G;
             indirecto.b = rec.b * weight.B;
-
-            // Agregar iluminación directa mínima para evitar negro absoluto (quitado por el bien del dielectrico)
-            /*
-            Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                                    newWo, primitives, lights);
-            indirecto.r += directa.r * 0.2f;
-            indirecto.g += directa.g * 0.2f;
-            indirecto.b += directa.b * 0.2f;
-            */
         }
     }
 

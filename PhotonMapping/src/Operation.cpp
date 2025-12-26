@@ -64,21 +64,27 @@ Direction Operations::reflect(Direction incident, Direction normal) {
 }
 
 bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    // Implementación estándar con manejo de entrada/salida y TIR
     Vector3 incident = I.normalized();
     Vector3 normal = N.normalized();
 
-    float sinThetaI = std::sqrt(1.0f - std::pow(incident.dotProduct(normal), 2));
-    float etaRatio = etaI / etaT;
-    float sinThetaT = etaRatio * sinThetaI;
+    float cosI = incident.dotProduct(normal);
+    float etaRatio;
 
-    if (sinThetaT > 1.0f) return false;
+    if (cosI < 0.0f) {
+        // Entrando al material
+        cosI = -cosI;
+        etaRatio = etaI / etaT;
+    } else {
+        // Saliendo del material: invertimos la normal
+        normal = normal * -1.0f;
+        etaRatio = etaT / etaI;
+    }
 
-    float cosThetaT = std::sqrt(1.0f - sinThetaT * sinThetaT);
+    float k = 1.0f - etaRatio * etaRatio * (1.0f - cosI * cosI);
+    if (k < 0.0f) return false; // Reflexión interna total
 
-    Vector3 parallel = (incident + normal * incident.dotProduct(normal)).normalized();
-    Vector3 perpendicular = normal * (-1.0f * cosThetaT);
-
-    out = (parallel * sinThetaT + perpendicular).normalized();
+    out = (incident * etaRatio + normal * (etaRatio * cosI - std::sqrt(k))).normalized();
     return true;
 }
 

@@ -77,11 +77,11 @@ static Material makeMirrorSpecular() {
 }
 
 static Material makeGlassDielectric() {
-    Color kd(0.0f, 0.0f, 0.0f);          // sin difusión
-    Color ks(0.1, 0.1f, 0.1f);       // reflejo muy tenue
-    Color kt(0.9f, 0.9f, 0.9f);        // casi transparente, un toque azul
-    float ior = 1.5f;                   // vidrio
-    Color Le(0.0f, 0.0f, 0.0f);          // sin emisión
+    Color kd(0.0f, 0.0f, 0.0f);       // sin difusión
+    Color ks(0.04f, 0.04f, 0.04f);    // reflejo mínimo (Fresnel se encarga del resto)
+    Color kt(0.96f, 0.96f, 0.96f);    // MUY transparente para cáusticas fuertes
+    float ior = 1.6f;                  // IOR más alto (cristal de plomo) para cáusticas más pronunciadas
+    Color Le(0.0f, 0.0f, 0.0f);       // sin emisión
     return Material(kd, ks, kt, Le, ior);
 }
 

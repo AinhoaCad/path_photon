@@ -181,6 +181,33 @@ Scene createCornellBoxConMallaOBJ(const std::string& objFilePath) {
     return scene;
 }
 
+// Cornell Box diseñada específicamente para ver cáusticas claras
+Scene createCornellBoxCausticas() {
+    Scene scene;
+
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
+
+    // Luz de área INTENSA y pequeña en el techo (simula luz puntual direccional)
+    Light techoLight(
+        Point(0.0f, 0.95f, 0.0f),    // centro de la luz
+        Vector3(0.0f, -1.0f, 0.0f),  // normal hacia abajo
+        0.3f,                         // ancho pequeño (luz más concentrada)
+        0.3f,                         // alto pequeño
+        Pixel{1.0f, 1.0f, 1.0f}      // Intensidad moderada para no sobreexponer
+    );
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con luz
+
+    // Esfera de cristal GRANDE flotando - actuará como lente
+    // Centrada, a media altura para que las cáusticas lleguen al suelo
+    scene.addSphere(Sphere(Vector3(0.0f, 0.3f, 0.0f), 0.35f, glassDielectric, false));
+
+
+    return scene;
+}
+
 
 Camera CameraConfiguration(int width, int height) {
 
@@ -254,9 +281,9 @@ int main(int argc, char** argv) {
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
     Scene CornellBoxConMalla = createCornellBoxConMalla();
     Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
+    Scene CornellBoxCausticas = createCornellBoxCausticas();
 
-    scene = CornellBoxMaterialesRaros; // Escena principal: Cornell con malla de triángulos
-
+    scene = CornellBoxMaterialesRaros; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 

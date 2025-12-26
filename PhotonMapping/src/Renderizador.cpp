@@ -145,16 +145,16 @@ void muestrearDireccionRebote(
     if (material.isDielectric()) {
         Direction n = normal;
         bool entering = (Operations::dot(incident, n) < 0.0f);
-        if (!entering) n = Operations::mult(n, -1.0f);
 
-        float etaI = entering ? 1.0f : material.ior;
-        float etaT = entering ? material.ior : 1.0f;
+        float etaI = 1.0f;           // aire
+        float etaT = material.ior;   // material
 
         Vector3 refracted;
         bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaI, etaT, refracted);
 
         if (!canRefract) {
-            nextDir = Operations::reflect(incident, n);
+            Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
+            nextDir = Operations::reflect(incident, reflectNormal);
             weight = material.ks;
             isDelta = true;
             return;
@@ -171,16 +171,19 @@ void muestrearDireccionRebote(
         float xi = static_cast<float>(rand()) / RAND_MAX;
 
         if (xi < Pr) {
-            nextDir = Operations::reflect(incident, n);
-            weight = Color(material.ks.R / Pr, material.ks.G / Pr, material.ks.B / Pr);
+            Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
+            nextDir = Operations::reflect(incident, reflectNormal);
+            weight = Color(material.ks.R / std::max(Pr, 1e-6f),
+                           material.ks.G / std::max(Pr, 1e-6f),
+                           material.ks.B / std::max(Pr, 1e-6f));
         } else {
             nextDir = refracted;
-            float etaRatio = etaI / etaT;
+            float etaRatio = entering ? (etaI / etaT) : (etaT / etaI);
             float etaCorr = etaRatio * etaRatio;
             weight = Color(
-                material.kt.R * etaCorr / Pt,
-                material.kt.G * etaCorr / Pt,
-                material.kt.B * etaCorr / Pt
+                (material.kt.R * etaCorr) / std::max(Pt, 1e-6f),
+                (material.kt.G * etaCorr) / std::max(Pt, 1e-6f),
+                (material.kt.B * etaCorr) / std::max(Pt, 1e-6f)
             );
         }
 

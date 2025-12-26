@@ -92,27 +92,26 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
     if (material.kt.R > 0 || material.kt.G > 0 || material.kt.B > 0) {
         Direction incident = Operations::mult(wi, -1.0f);
         float cosTheta = Operations::dot(incident, normal);
+        float absCosTh = std::fabs(cosTheta);
+
         float etaI = 1.0f, etaT = material.ior;
         if (cosTheta > 0.0f) {
             // saliendo del material
             etaI = material.ior;
             etaT = 1.0f;
-        } else {
-            cosTheta = -cosTheta;
-            etaI = 1.0f;
-            etaT = material.ior;
         }
-        float R = Operations::fresnelDielectric(cosTheta, etaI, etaT);
+
+        float R = Operations::fresnelDielectric(absCosTh, etaI, etaT);
         float T = 1.0f - R;
 
         Vector3 refracted;
-        
-        bool ok = Operations::refract(incident.toVector(), normal.toVector(), etaI, etaT, refracted);
+        bool ok = Operations::refract(incident.toVector(), normal.toVector(), 1.0f, material.ior, refracted);
 
         if (ok && T > 0.0f) {
             float absCos = std::fabs(Operations::dot(refracted, normal));
             if (absCos < 1e-6f) absCos = 1e-6f;
-            float factor = (T / absCos) / ((etaI / etaT) * (etaI / etaT)); // etaCorr
+            float etaRatio = (cosTheta > 0.0f) ? (material.ior / 1.0f) : (1.0f / material.ior);
+            float factor = (T / absCos) / (etaRatio * etaRatio); // etaCorr
             brdf_transmisiva = {
                 material.kt.R * factor,
                 material.kt.G * factor,

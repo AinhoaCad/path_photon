@@ -61,47 +61,38 @@ Direction Operations::reflect(Direction incident, Direction normal) {
     return Operations::sub(incident, Operations::mult(normal, 2 * dotProduct));
 }
 
-/*bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
-    // I: dirección incidente normalizada
-    // N: normal apuntando hacia afuera del medio actual
-    // etaI: índice del medio de entrada
-    // etaT: índice del medio de salida
-
-    float etaRatio = etaI / etaT;
-    float cosi = -std::max(-1.0f, std::min(1.0f, I.dotProduct(N))); // cos(θi), siempre positivo
-
-    float k = 1.0f - etaRatio * etaRatio * (1.0f - cosi * cosi);
-    if (k < 0.0f) return false; // TIR
-
-    out = (I * etaRatio + N * (etaRatio * cosi - std::sqrt(k))).normalized();
-    return true;
-}*/
-
 bool Operations::refract(const Vector3& I, const Vector3& N, float etaI, float etaT, Vector3& out) {
+    // I: dirección incidente normalizada (apuntando hacia la superficie)
+    // N: normal de la superficie
+    // etaI: índice del medio desde donde viene el rayo
+    // etaT: índice del medio hacia donde va el rayo
     
-    // Normalizar vectores por seguridad
     Vector3 incident = I.normalized();
     Vector3 normal = N.normalized();
-
-    // Calcular seno del ángulo incidente
-    float sinThetaI = std::sqrt(1.0f - std::pow(incident.dotProduct(normal), 2));
-
-    // Ley de Snell: sin(thetaT) = (etaI / etaT) * sin(thetaI)
-    float etaRatio = etaI / etaT;
-    float sinThetaT = etaRatio * sinThetaI;
-
-    // Total Internal Reflection (TIR)
-    if (sinThetaT > 1.0f) return false;
-
-    // Calcular cos(thetaT) usando sin^2 + cos^2 = 1
-    float cosThetaT = std::sqrt(1.0f - sinThetaT * sinThetaT);
-
-    // Construir dirección refractada
-    // Descomponemos incidente en paralelo y perpendicular a la normal
-    Vector3 parallel = (incident + normal * incident.dotProduct(normal)).normalized();
-    Vector3 perpendicular = normal * (-1.0f * cosThetaT);
-
-    out = (parallel * sinThetaT + perpendicular).normalized();
+    
+    // Calcular el producto punto entre incidente y normal
+    float cosI = incident.dotProduct(normal);
+    
+    // Ajustar normal y ratio de índices según si entramos o salimos
+    float etaRatio;
+    if (cosI < 0.0f) {
+        // Entrando al material: el rayo y la normal apuntan en direcciones opuestas
+        cosI = -cosI;
+        etaRatio = etaI / etaT;
+    } else {
+        // Saliendo del material: el rayo y la normal apuntan en la misma dirección
+        normal = normal * -1.0f;
+        etaRatio = etaT / etaI;
+    }
+    
+    // Verificar reflexión interna total usando ley de Snell
+    float k = 1.0f - etaRatio * etaRatio * (1.0f - cosI * cosI);
+    if (k < 0.0f) {
+        return false; // TIR (Total Internal Reflection)
+    }
+    
+    // Calcular dirección refractada
+    out = (incident * etaRatio + normal * (etaRatio * cosI - std::sqrt(k))).normalized();
     return true;
 }
 

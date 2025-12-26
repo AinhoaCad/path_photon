@@ -63,32 +63,6 @@ Scene createCornellBox() {
     return scene;
 }
 
-Scene createCornellBoxLuzTecho() {
-    Scene scene;
-
-    scene.addPlane(Plane(Vector3(1, 0, 0), 1, redDiffuse));
-    scene.addPlane(Plane(Vector3(-1, 0, 0), 1, greenDiffuse));
-    scene.addPlane(Plane(Vector3(0, 1, 0), 1, grayDiffuse));
-
-    Light techoLight(
-        Point(0, 1, 0),
-        Vector3(0, -1, 0),
-        2.0f,
-        2.0f,
-        Pixel{5, 5, 5}
-    );
-
-    scene.addPlane(Plane(Vector3(0, -1, 0), 1, grayDiffuse, techoLight));
-
-    scene.addPlane(Plane(Vector3(0, 0, -1), 1, grayDiffuse));
-
-    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25f), 0.3f, purpleDiffuse, false));
-    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25f), 0.3f, cyanDiffuse, false));
-
-    std::cout << "Escena Cornell Box con techo emitiendo luz creada.\n";
-
-    return scene;
-}
 
 Scene createCornellBoxMaterialesRaros() {
     Scene scene;
@@ -97,14 +71,10 @@ Scene createCornellBoxMaterialesRaros() {
     scene.addPlane(Plane(Vector3(-1, 0, 0), 1, greenDiffuse));
     scene.addPlane(Plane(Vector3(0, 1, 0), 1, grayDiffuse));
 
-    Light techoLight(
-        Point(0, 1, 0),
-        Vector3(0, -1, 0),
-        2.0f,
-        2.0f,
-        Pixel{1, 1, 1}
-    );
-    scene.addPlane(Plane(Vector3(0, -1, 0), 1, grayDiffuse, techoLight));
+    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+
+    scene.addPlane(Plane(Vector3(0, -1, 0), 1, grayDiffuse));
 
     scene.addPlane(Plane(Vector3(0, 0, -1), 1, grayDiffuse));
 
@@ -161,7 +131,14 @@ int main(int argc, char** argv) {
               << "  Resolucion = " << width << " x " << height << "\n"
               << "  Archivo = " << outputFile << "\n";
 
-    scene = createCornellBox();
+    // Creacion de escenas
+    
+    Scene CornellBoxBasica = createCornellBox();
+    Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
+
+    std::cout << "Escenas creadas.\n";
+
+    scene = CornellBoxBasica;
 
     Camera camera = CameraConfiguration(width, height);
 
