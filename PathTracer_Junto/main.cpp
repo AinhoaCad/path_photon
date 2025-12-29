@@ -283,7 +283,7 @@ int main(int argc, char** argv) {
     Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
     Scene CornellBoxCausticas = createCornellBoxCausticas();
 
-    scene = CornellBoxMaterialesRaros; // Elegir la escena a renderizar aquí
+    scene = CornellBoxCausticas; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 
