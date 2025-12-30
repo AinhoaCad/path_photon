@@ -43,7 +43,6 @@ Pixel calcularColorMasCercano(Ray& ray, const std::vector<Primitive*>& primitive
     return color;
 }
 
-
 Pixel promedioColores(const std::vector<Pixel>& colores) {
     if (colores.empty()) return {0,0,0};
 
@@ -103,10 +102,6 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
     }
     */
     
-    
-
-
-
     shadowDir = Operations::sub(lightSample, shadowOrigin);
     maxDist = Operations::mod(shadowDir);
     shadowDir = Operations::norm(shadowDir);
@@ -121,7 +116,6 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
     }
     return false;
 }
-
 
 //---------------------------------------------------------
 //FUNCIONES PARA RENDERIZADO SIN REBOTE INDIRECTO
@@ -179,8 +173,6 @@ Pixel calcularIluminacion(
             */
             
             //SIMPLIFICAMOS LO ANTERIOR
-            
-            
             Point origen = luz.origen;
             contrib = luz.calcularLuzAreaSample(
                     inter.punto, inter.normal, colorMat, origen

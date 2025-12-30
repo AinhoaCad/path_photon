@@ -135,7 +135,32 @@ Direction Operations::randomHemisphereDirection(const Direction& normal) {
     return Operations::norm(world);
 }
 
-
+/**
+ * Calcula el coeficiente de Fresnel para un dieléctrico no polarizado.
+ * 
+ * Esta función determina la fracción de luz que se refleja en la interfaz 
+ * entre dos materiales dieléctricos (por ejemplo, aire y vidrio), usando 
+ * la ley de Fresnel. Considera reflexión interna total y el ángulo de 
+ * incidencia entrante o saliente.
+ * 
+ * @param cosThetaI Coseno del ángulo de incidencia respecto a la normal de la superficie.
+ *                  Debe estar en el rango [-1, 1]. Si es negativo, indica que el rayo
+ *                  entra desde dentro del material.
+ * @param etaI Índice de refracción del medio de origen (de donde viene el rayo).
+ * @param etaT Índice de refracción del medio de destino (hacia donde va el rayo).
+ * 
+ * @return float Coeficiente de reflexión Fresnel (R), en el rango [0,1].
+ *               Representa la fracción de luz reflejada; la fracción transmitida 
+ *               es 1 - R.
+ * 
+ * @note La función maneja:
+ *       - Reflexión total interna (R = 1)
+ *       - Intercambio de índices si el rayo sale del material
+ *       - Promedio de componentes paralela y perpendicular para luz no polarizada
+ * 
+ * @warning Se espera que los índices de refracción sean positivos y no nulos.
+ * 
+ */
 float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
     // Clamp cosThetaI al rango [-1, 1]
     // Clamp manual de cosThetaI al rango [-1, 1]
