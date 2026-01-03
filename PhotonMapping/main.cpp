@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <chrono>
 #include "Scene.hpp"
 #include "Camara.hpp"
 #include "Primitive.hpp"
@@ -21,7 +22,7 @@
 // PASS 1 : Emisión y construcción del mapa de fotones
 PhotonMapper createAndBuildPhotonMapper(Scene& scene, int maxBounces) {
 
-    const int N_PHOTONS_TO_SHOOT = 300000;  // Número total de fotones a emitir
+    const int N_PHOTONS_TO_SHOOT = 100000;  // Número total de fotones a emitir
     const int PM_MAX_BOUNCES = maxBounces;
 
     std::cout << "\n--- Construyendo Photon Map (Fase 1: Emision) ---\n";
@@ -106,8 +107,8 @@ int main(int argc, char** argv) {
 
     // Parámetros para Photon Mapping
 
-    const int PM_N_PHOTONS_SEARCH = 300; // k-nearest photons
-    const float PM_MAX_RADIUS = 0.05f; // Radio maximo de búsqueda
+    const int PM_N_PHOTONS_SEARCH = 100; // k-nearest photons
+    const float PM_MAX_RADIUS = 0.50f; // Radio maximo de búsqueda
     const KERNEL PM_KERNEL_TYPE = BOX; // Tipo de kernel
 
     if (argc != 5) {
@@ -138,13 +139,20 @@ int main(int argc, char** argv) {
 
     std::cout << "Escenas creadas.\n";
 
-    scene = CornellBoxMaterialesRaros;
+    scene = CornellBoxBasica;
 
     Camera camera = CameraConfiguration(width, height);
 
-    // PASS 1: Crear y construir el mapa de fotones
+    // ---------------------- MEDIR TIEMPO ----------------------
+    auto startTotal = std::chrono::high_resolution_clock::now();
 
+    // PASS 1: Crear y construir el mapa de fotones
+    auto startPhoton = std::chrono::high_resolution_clock::now();
     PhotonMapper photonMapper = createAndBuildPhotonMapper(scene, maxBounces);
+    auto endPhoton = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> photonTime = endPhoton - startPhoton;
+    std::cout << "Tiempo para construir Photon Map: " << photonTime.count() << " segundos\n";
 
     std::cout << "\n--- Renderizando con Photon Mapping ---\n";
     std::cout << "  Fotones a buscar = " << PM_N_PHOTONS_SEARCH << "\n";
@@ -155,6 +163,7 @@ int main(int argc, char** argv) {
 
 
     // PASS 2: Renderizado usando el mapa de fotones
+    auto startRender = std::chrono::high_resolution_clock::now();
     Image image = camera.generateImageWithLightingMultipleRaysConFotones(
         scene.getPrimitives(),
         scene.getLights(),
@@ -165,9 +174,13 @@ int main(int argc, char** argv) {
         PM_N_PHOTONS_SEARCH,
         PM_KERNEL_TYPE
     );
+    auto endRender = std::chrono::high_resolution_clock::now();
+
+     std::chrono::duration<double> renderTime = endRender - startRender;
+    std::cout << "Tiempo de renderizado: " << renderTime.count() << " segundos\n";
 
     // Aplicar tone mapping
-    Tonemapping::applyToneMapping(image, ToneMappingOperator::GAMMA, 1.0f / 1.5f);
+    Tonemapping::applyToneMapping(image, ToneMappingOperator::GAMMA, 1.0f / 2.2f);
 
     // Build informative filename suffix: <base>_<Kernel>M<M>N<N>R<R>
     // Kernel: Box | Cone | Gaussian
@@ -190,6 +203,10 @@ int main(int argc, char** argv) {
     } else {
         std::cerr << "Error al guardar la imagen: " << pm_name << std::endl;
     }
+
+    auto endTotal = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> totalTime = endTotal - startTotal;
+    std::cout << "Tiempo total de ejecución: " << totalTime.count() << " segundos\n";
 
     std::cout << "IMAGENES GENERADAS\n";
     return 0;
