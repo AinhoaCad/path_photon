@@ -69,6 +69,7 @@ extern Material blueDiffuse;
 extern Material purpleDiffuse;
 extern Material cyanDiffuse;
 extern Material grayDiffuse;
+extern Material yellowDiffuse;
 extern Material mirrorSpecular;
 extern Material glassDielectric;
 extern Material plasticMaterial;

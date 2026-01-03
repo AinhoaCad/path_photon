@@ -208,6 +208,88 @@ Scene createCornellBoxCausticas() {
     return scene;
 }
 
+Scene createCornellBoxFlotante() {
+    Scene scene;
+
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse)); // Techo
+
+    // Esfera de cristal difusa flotando 
+    scene.addSphere(Sphere(Vector3(0.0f, -0.1f, 0.0f), 0.3f, yellowDiffuse, false));
+
+    // Luz puntual
+    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+    std::cout << "Escena del Cornell Box con esfera flotante creada." << std::endl;
+
+    return scene;
+}
+
+Scene createCornellBoxFlotanteArea() {
+    Scene scene;
+
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
+
+    // Esfera de cristal difusa flotando 
+    scene.addSphere(Sphere(Vector3(0.0f, -0.1f, 0.0f), 0.3f, yellowDiffuse, false));
+
+    // Luz de área INTENSA y pequeña en el techo (simula luz puntual direccional)
+    Light techoLight(
+        Point(0.0f, 0.95f, 0.0f),    // centro de la luz
+        Vector3(0.0f, -1.0f, 0.0f),  // normal hacia abajo
+        0.3f,                         // ancho pequeño (luz más concentrada)
+        0.3f,                         // alto pequeño
+        Pixel{1.0f, 1.0f, 1.0f}      // Intensidad moderada para no sobreexponer
+    );
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con luz
+
+    std::cout << "Escena del Cornell Box con esfera flotante creada." << std::endl;
+
+    return scene;
+}
+
+Scene createCornellBoxMaterialesRaros2() {
+    Scene scene;
+
+    // Pared izquierda (rojo), x = -1
+    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));
+
+    // Pared derecha (verde), x = 1
+    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse));
+
+    // Suelo, y = -1
+    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));
+
+    Light techoLight(
+        Point(0.0f, 1.0f, 0.0f),    // centro de la luz
+        Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
+        2.0f,                       // ancho
+        2.0f,                       // alto
+        Pixel{1.0f, 1.0f, 1.0f}  // intensidad/poder de la luz aumentado
+    );
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
+    //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLigh
+
+    // Fondo, z = 1
+    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));
+
+    // Esferas
+    scene.addSphere(Sphere(Vector3(-0.5f, -0.7f, 0.25), 0.3f, plasticMaterial, false));
+    scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, shinyGold, false));
+    
+    // Luz puntual
+    //scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+
+    std::cout << "Escena del Cornell Box creada." << std::endl;
+
+    return scene;
+}
 
 Camera CameraConfiguration(int width, int height) {
 
@@ -277,13 +359,16 @@ int main(int argc, char** argv) {
 
     // Crea y ajusta la escena
     Scene CornellBoxBasica = createCornellBox();
+    Scene CornellBoxBasicaFlotante = createCornellBoxFlotante();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
     Scene CornellBoxConMalla = createCornellBoxConMalla();
     Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
     Scene CornellBoxCausticas = createCornellBoxCausticas();
+    Scene CornellBoxFlotanteArea = createCornellBoxFlotanteArea();
+    Scene CornellBoxMaterialesRaros2 = createCornellBoxMaterialesRaros2();
 
-    scene = CornellBoxBasica; // Elegir la escena a renderizar aquí
+    scene = CornellBoxMaterialesRaros2; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 

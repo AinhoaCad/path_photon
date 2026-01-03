@@ -10,6 +10,7 @@ static Color blue(0.0f, 0.0f, 1.0f);
 static Color cyan(0.5f, 0.9f, 0.9f);
 static Color purple(0.8f, 0.6f, 0.9f);
 static Color gray(0.5f, 0.5f, 0.5f);
+static Color yellow(1.0f, 1.0f, 0.0f);
 
 // Helper: normalizar kd+ks+kt por canal si la suma excede 1
 static void normalizeColors(Color& kd, Color& ks, Color& kt) {
@@ -66,6 +67,12 @@ static Material makeGrayDiffuse() {
     normalizeColors(kd, ks, kt);
     return Material(kd, ks, kt, Le, ior);
 }
+static Material makeYellowDiffuse() {
+    Color kd = yellow; Color ks = black; Color kt = black; Color Le = black; float ior = 1.0f;
+    normalizeColors(kd, ks, kt);
+    return Material(kd, ks, kt, Le, ior);
+}
+
 
 static Material makeMirrorSpecular() {
     Color kd = black;
@@ -148,6 +155,7 @@ Material blueDiffuse   = makeBlueDiffuse();
 Material purpleDiffuse = makePurpleDiffuse();
 Material cyanDiffuse   = makeCyanDiffuse();
 Material grayDiffuse   = makeGrayDiffuse();
+Material yellowDiffuse = makeYellowDiffuse();
 Material mirrorSpecular = makeMirrorSpecular();
 Material glassDielectric = makeGlassDielectric();
 Material plasticMaterial = makePlasticMaterial();
