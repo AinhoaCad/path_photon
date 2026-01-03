@@ -16,6 +16,6 @@ TO DO
 ----------------GLOBAL / PATH -----------------------------
 - Formato de la imagen
 - Caústicas
-
+- Revisar calcularLuzAreaSample -> calcularRadianciaRectangular devuelve el power como tal ¿está bien? los comentarios no coinciden y en general la función
 ----------------PHOTON-----------------------------------
 - Photonmapping repaso tocho
