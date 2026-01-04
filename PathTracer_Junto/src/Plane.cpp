@@ -76,11 +76,3 @@ void Plane::setAreaLight(const Light& light) {
 bool Plane::emitsLight() const {
     return emision_;
 }
-
-// Bounding box acotado para BVH: limita la influencia del plano al entorno de la escena.
-AABB Plane::boundingBox() const {
-    // Para Embree, usar AABB infinito para asegurar que se intersecta en fallback
-    const float M = 1e6f;
-    return AABB(Vector3(-M, -M, -M), Vector3(M, M, M));
-}
-

@@ -5,9 +5,6 @@
 #include <algorithm>
 #include <cstddef>
 
-//#include "Point.hpp"
-//#include "Direction.hpp"
-
 class Point;  
 class Direction;  
 

@@ -72,11 +72,6 @@ bool Sphere::emitsLight() const {
     return false;
 }
 
-AABB Sphere::boundingBox() const {
-    Vector3 rad(radius_, radius_, radius_);
-    return AABB(center_ - rad, center_ + rad);
-}
-
 // Setters de compatibilidad
 void Sphere::setCentro(const Vector3& c) {
     center_ = c;

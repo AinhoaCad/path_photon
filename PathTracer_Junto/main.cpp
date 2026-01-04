@@ -4,12 +4,8 @@
 #include "Camara.hpp"
 #include "Primitive.hpp"
 #include "Material.hpp"
-#include "Triangle.hpp"
-#include "SceneBVH.hpp"
 #ifdef USE_EMBREE
-#include "SceneEmbree.hpp"
 #endif
-#include "OBJLoader.hpp"
 #include "Tonemapping.hpp"
 
 
@@ -118,69 +114,6 @@ Scene createCornellBoxMaterialesRaros() {
     return scene;
 }
 
-// Cornell Box con una malla simple (dos triángulos formando un quad inclinado)
-Scene createCornellBoxConMalla() {
-    Scene scene;
-
-    // Paredes
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse));  // techo
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
-
-    // Luz puntual centrada
-    scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
-
-    // Malla: quad inclinado
-    Point p0(-0.4f, -0.7f, 0.25f);
-    Point p1( 0.4f, -0.7f, 0.25f);
-    Point p2( 0.4f, -0.25f, -0.2f);
-    Point p3(-0.4f, -0.25f, -0.2f);
-
-    Vector3 e1 = p1 - p0;
-    Vector3 e2 = p2 - p0;
-    Direction n = e1.cross(e2).normalized().toDirection();
-
-    scene.addTriangle(Triangle(p0, p1, p2, n, n, n, purpleDiffuse));
-    scene.addTriangle(Triangle(p0, p2, p3, n, n, n, plasticMaterial));
-
-    std::cout << "Cornell Box con malla sencilla creada." << std::endl;
-    return scene;
-}
-
-Scene createCornellBoxConMallaOBJ(const std::string& objFilePath) {
-    Scene scene;
-
-    // Paredes
-    scene.addPlane(Plane(Vector3(1.0f, 0.0f, 0.0f), 1.0f, redDiffuse));    // izquierda
-    scene.addPlane(Plane(Vector3(-1.0f, 0.0f, 0.0f), 1.0f, greenDiffuse)); // derecha
-    scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));   // suelo
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse));  // techo
-    scene.addPlane(Plane(Vector3(0.0f, 0.0f, -1.0f), 1.0f, grayDiffuse));  // fondo
-
-    // Luz puntual centrada
-    scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
-
-    // Cargar malla desde archivo OBJ
-    // Parámetros: archivo, material, escala, traslación
-    bool success = OBJLoader::loadOBJ(
-        objFilePath,
-        scene,
-        purpleDiffuse,                      // Material
-        Vector3(0.5f, 0.5f, 0.5f),         // Escala
-        Vector3(0.0f, -0.5f, 0.0f)         // Traslación
-    );
-
-    if (!success) {
-        std::cerr << "[ESCENA] Advertencia: No se pudo cargar el archivo OBJ " << objFilePath << std::endl;
-        std::cerr << "[ESCENA] La escena estará vacía salvo las paredes." << std::endl;
-    }
-
-    std::cout << "Cornell Box con malla OBJ creada." << std::endl;
-    return scene;
-}
-
 // Cornell Box diseñada específicamente para ver cáusticas claras
 Scene createCornellBoxCausticas() {
     Scene scene;
@@ -202,7 +135,7 @@ Scene createCornellBoxCausticas() {
 
     // Esfera de cristal GRANDE flotando - actuará como lente
     // Centrada, a media altura para que las cáusticas lleguen al suelo
-    scene.addSphere(Sphere(Vector3(0.0f, 0.3f, 0.0f), 0.35f, glassDielectric, false));
+    scene.addSphere(Sphere(Vector3(0.3f, -0.6f, 0.0f), 0.35f, glassDielectric, false));
 
 
     return scene;
@@ -247,7 +180,7 @@ Scene createCornellBoxFlotanteArea() {
         0.3f,                         // alto pequeño
         Pixel{1.0f, 1.0f, 1.0f}      // Intensidad moderada para no sobreexponer
     );
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con luz
+    scene.addPlane(Plane(Vector3(0.0f, -0.7f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con luz
 
     std::cout << "Escena del Cornell Box con esfera flotante creada." << std::endl;
 
@@ -266,14 +199,8 @@ Scene createCornellBoxMaterialesRaros2() {
     // Suelo, y = -1
     scene.addPlane(Plane(Vector3(0.0f, 1.0f, 0.0f), 1.0f, grayDiffuse));
 
-    Light techoLight(
-        Point(0.0f, 1.0f, 0.0f),    // centro de la luz
-        Vector3(0.0f, -1.0f, 0.0f), // normal hacia abajo
-        2.0f,                       // ancho
-        2.0f,                       // alto
-        Pixel{1.0f, 1.0f, 1.0f}  // intensidad/poder de la luz aumentado
-    );
-    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse, techoLight)); // Techo con emisión
+    
+    scene.addPlane(Plane(Vector3(0.0f, -1.0f, 0.0f), 1.0f, grayDiffuse)); // Techo con emisión
     //La luz en los planos se añade automáticamente al vector de luces en addPlane, asi que no es necesario añadirla manualmente con addLigh
 
     // Fondo, z = 1
@@ -284,7 +211,7 @@ Scene createCornellBoxMaterialesRaros2() {
     scene.addSphere(Sphere(Vector3(0.5f, -0.7f, -0.25), 0.3f, shinyGold, false));
     
     // Luz puntual
-    //scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
+    scene.addLight(Light(Vector3(0.0f, 0.5f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
     std::cout << "Escena del Cornell Box creada." << std::endl;
 
@@ -362,13 +289,11 @@ int main(int argc, char** argv) {
     Scene CornellBoxBasicaFlotante = createCornellBoxFlotante();
     Scene CornellBoxLuzTecho = createCornellBoxLuzTecho(); 
     Scene CornellBoxMaterialesRaros = createCornellBoxMaterialesRaros();
-    Scene CornellBoxConMalla = createCornellBoxConMalla();
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
     Scene CornellBoxCausticas = createCornellBoxCausticas();
     Scene CornellBoxFlotanteArea = createCornellBoxFlotanteArea();
     Scene CornellBoxMaterialesRaros2 = createCornellBoxMaterialesRaros2();
 
-    scene = CornellBoxMaterialesRaros2; // Elegir la escena a renderizar aquí
+    scene = CornellBoxCausticas; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 
