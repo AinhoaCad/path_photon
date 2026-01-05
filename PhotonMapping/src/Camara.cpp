@@ -27,7 +27,8 @@ extern Pixel calcularIluminacionGlobalConFotones(
     int pm_nPhotons,
     KERNEL pm_kernelType,
     int depth, 
-    int maxBounces
+    int maxBounces,
+    bool usarPhotonMappingParaDirecta
 );
 
 // -----------------------------------------------------------------------------
@@ -94,7 +95,8 @@ Image Camera::generateImageWithLightingMultipleRaysConFotones(
     int maxBounces,
     float pm_radius,
     int pm_nPhotons,
-    KERNEL pm_kernelType
+    KERNEL pm_kernelType,
+    bool usarPhotonMappingParaDirecta
 ) {
     Image image(pixelWidth, pixelHeight);
     srand(static_cast<unsigned>(time(nullptr)));
@@ -120,7 +122,8 @@ Image Camera::generateImageWithLightingMultipleRaysConFotones(
                         inter, lights, primitives, wo,
                         photonMapper, pm_radius, pm_nPhotons,
                         pm_kernelType,
-                        0, maxBounces
+                        0, maxBounces,
+                        usarPhotonMappingParaDirecta
                     );
                 }
 

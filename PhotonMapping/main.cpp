@@ -105,10 +105,15 @@ int main(int argc, char** argv) {
     int maxBounces = 12;
     Scene scene;
 
+    // ===== FLAG PARA CONTROLAR ILUMINACIÓN DIRECTA =====
+    // false = Next-Event Estimation (NEE) - Opción estándar con sombras nítidas
+    // true  = Photon Mapping para directa - Solo para comparaciones/pruebas
+    bool usarPhotonMappingParaDirecta = false;
+
     // Parámetros para Photon Mapping
 
     const int PM_N_PHOTONS_SEARCH = 100; // k-nearest photons
-    const float PM_MAX_RADIUS = 0.50f; // Radio maximo de búsqueda
+    const float PM_MAX_RADIUS = 0.20f; // Radio maximo de búsqueda
     const KERNEL PM_KERNEL_TYPE = BOX; // Tipo de kernel
 
     if (argc != 5) {
@@ -130,7 +135,8 @@ int main(int argc, char** argv) {
     std::cout << "Renderizando con:\n"
               << "  SPP = " << numRays << "\n"
               << "  Resolucion = " << width << " x " << height << "\n"
-              << "  Archivo = " << outputFile << "\n";
+              << "  Archivo = " << outputFile << "\n"
+              << "  Directa = " << (usarPhotonMappingParaDirecta ? "Photon Mapping" : "NEE") << "\n";
 
     // Creacion de escenas
     
@@ -172,7 +178,8 @@ int main(int argc, char** argv) {
         maxBounces,
         PM_MAX_RADIUS,
         PM_N_PHOTONS_SEARCH,
-        PM_KERNEL_TYPE
+        PM_KERNEL_TYPE,
+        usarPhotonMappingParaDirecta
     );
     auto endRender = std::chrono::high_resolution_clock::now();
 

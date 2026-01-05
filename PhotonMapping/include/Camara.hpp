@@ -45,6 +45,7 @@ public:
         int maxBounces,
         float pm_radius,
         int pm_nPhotons,
-        KERNEL pm_kernelType // <--- ¡AÑADIDO!
+        KERNEL pm_kernelType,
+        bool usarPhotonMappingParaDirecta = false
     );
 };

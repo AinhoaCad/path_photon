@@ -281,7 +281,8 @@ Pixel calcularIluminacionGlobalConFotones(
     int pm_nPhotons,
     KERNEL kernelType,
     int depth,
-    int maxBounces
+    int maxBounces,
+    bool usarPhotonMappingParaDirecta
 ) {
     Pixel colorTotal = {0, 0, 0};
     const Material& material = inter.primitiva->getMaterial();
@@ -293,10 +294,26 @@ Pixel calcularIluminacionGlobalConFotones(
         return emision;
     }
 
+    // ===== CÁLCULO DE ILUMINACIÓN DIRECTA =====
+    // El flag usarPhotonMappingParaDirecta controla el método:
+    // - false (por defecto): Usa Next-Event Estimation (NEE) - Estándar, sombras nítidas, baja varianza
+    // - true: Usa Photon Mapping para estimar directa - Solo para comparaciones/pruebas
     if (!material.isEspejoPuro() && !material.isDielectric()) {
-        Pixel directa = calcularIluminacionDirecta(
-            inter.punto, inter.normal, material, wo, primitives, luces
-        );
+        Pixel directa = {0, 0, 0};
+        
+        if (usarPhotonMappingParaDirecta) {
+            // OPCIÓN 1: Estimación de directa mediante photon mapping (solo primer rebote)
+            Color colorDirecta = photonMapper->estimateRadiance(
+                inter.punto, inter.normal, wo, material,
+                pm_radius, pm_nPhotons, kernelType
+            );
+            directa = colorDirecta.toPixel();
+        } else {
+            // OPCIÓN 2: Iluminación directa estándar con NEE
+            directa = calcularIluminacionDirecta(
+                inter.punto, inter.normal, material, wo, primitives, luces
+            );
+        }
 
         colorTotal.r += directa.r;
         colorTotal.g += directa.g;
@@ -371,7 +388,8 @@ Pixel calcularReboteIndirectoConFotones(
     int pm_nPhotons,
     KERNEL kernelType,
     int depth,
-    int maxBounces
+    int maxBounces,
+    bool usarPhotonMappingParaDirecta
 ) {
     if (depth >= maxBounces) return {0, 0, 0};
 
@@ -414,7 +432,7 @@ Pixel calcularReboteIndirectoConFotones(
             Pixel rec = calcularIluminacionGlobalConFotones(
                 inter, lights, primitives, newWo,
                 photonMapper, pm_radius, pm_nPhotons, kernelType,
-                depth + 1, maxBounces
+                depth + 1, maxBounces, usarPhotonMappingParaDirecta
             );
 
             indirecto.r = rec.r * weight.R;

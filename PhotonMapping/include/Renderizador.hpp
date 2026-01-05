@@ -75,7 +75,8 @@ Pixel calcularIluminacionGlobalConFotones(
     int pm_nPhotons,
     KERNEL pm_kernelType,
     int depth,
-    int maxBounces
+    int maxBounces,
+    bool usarPhotonMappingParaDirecta = false
 );
 
 // Rebote indirecto usando Photon Mapping
@@ -91,5 +92,6 @@ Pixel calcularReboteIndirectoConFotones(
     int pm_nPhotons,
     KERNEL pm_kernelType,
     int depth,
-    int maxBounces
+    int maxBounces,
+    bool usarPhotonMappingParaDirecta = false
 );
