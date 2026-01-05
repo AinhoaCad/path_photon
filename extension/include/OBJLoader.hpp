@@ -15,7 +15,8 @@ public:
         Scene& scene,
         const Material& material,
         const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
-        const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f)
+        const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f),
+        bool smoothNormals = true
     );
 
     // Versión alternativa que devuelve directamente los triángulos
@@ -23,7 +24,8 @@ public:
         const std::string& filepath,
         const Material& material,
         const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
-        const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f)
+        const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f),
+        bool smoothNormals = true
     );
 
 private:

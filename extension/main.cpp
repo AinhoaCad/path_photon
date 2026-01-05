@@ -12,7 +12,7 @@
 #include "Tonemapping.hpp"
 
 // Cornell Box con una malla simple (dos triángulos formando un quad inclinado)
-Scene createCornellBoxConMalla() {
+Scene createCornellBoxConMalla(bool smoothNormals) {
     Scene scene;
 
     // Paredes
@@ -35,14 +35,14 @@ Scene createCornellBoxConMalla() {
     Vector3 e2 = p2 - p0;
     Direction n = e1.cross(e2).normalized().toDirection();
 
-    scene.addTriangle(Triangle(p0, p1, p2, n, n, n, purpleDiffuse));
-    scene.addTriangle(Triangle(p0, p2, p3, n, n, n, plasticMaterial));
+    scene.addTriangle(Triangle(p0, p1, p2, n, n, n, purpleDiffuse, smoothNormals));
+    scene.addTriangle(Triangle(p0, p2, p3, n, n, n, plasticMaterial, smoothNormals));
 
     std::cout << "Cornell Box con malla sencilla creada." << std::endl;
     return scene;
 }
 
-Scene createCornellBoxConMallaOBJ(const std::string& objFilePath) {
+Scene createCornellBoxConMallaOBJ(const std::string& objFilePath, bool smoothNormals) {
     Scene scene;
 
     // Paredes
@@ -56,13 +56,19 @@ Scene createCornellBoxConMallaOBJ(const std::string& objFilePath) {
     scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
     // Cargar malla desde archivo OBJ
-    // Parámetros: archivo, material, escala, traslación
+    // Parámetros: archivo, material, escala, traslación, suavizado
     bool success = OBJLoader::loadOBJ(
         objFilePath,
         scene,
-        purpleDiffuse,                      // Material
-        Vector3(0.5f, 0.5f, 0.5f),         // Escala
-        Vector3(0.0f, -0.5f, 0.0f)         // Traslación
+        mirrorSpecular,                      // Material
+
+        /*Vector3(8.0f, 8.0f, 8.0f),         // Escala CONEJO
+        Vector3(0.0f, -1.0f, 0.0f),        // Traslación*/
+
+        Vector3(0.2f, 0.2f, 0.2f),         // Escala TETERA
+        Vector3(0.0f, -0.5f, 0.0f),        // Traslación 
+
+        smoothNormals                       // Flag de suavizado
     );
 
     if (!success) {
@@ -96,6 +102,13 @@ int main(int argc, char** argv) {
 
     //int numRays = 64; // Número de rayos por píxel por defecto
     int maxBounces = 12; // Número máximo de rebotes de luz
+    
+    // ============================================
+    // FLAG DE SUAVIZADO DE NORMALES
+    // Cambiar aquí entre true (suavizado) o false (plano)
+    // ============================================
+    bool useSmoothNormals = true;  // true = suavizado | false = plano
+    
     Scene scene;
 
     //número de muestras, alto, ancho y nombre de archivo por línea de comandos
@@ -134,15 +147,16 @@ int main(int argc, char** argv) {
     std::cout << "Renderizando con:\n"
               << "  SPP = " << numRays << "\n"
               << "  Resolución = " << width << " x " << height << "\n"
-              << "  Archivo = " << outputFile << "\n";
+              << "  Archivo = " << outputFile << "\n"
+              << "  Normales = " << (useSmoothNormals ? "suavizadas" : "planas (una por triángulo)") << "\n";
 
     //--------------------------------------------------------------
     // ESCENAS Y CÁMARA
     //--------------------------------------------------------------
 
     // Crea y ajusta la escena
-    Scene CornellBoxConMalla = createCornellBoxConMalla();
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("templo_compuesto.obj");
+    Scene CornellBoxConMalla = createCornellBoxConMalla(useSmoothNormals);
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("tetera.obj", useSmoothNormals);
     
 
     scene = CornellBoxConMalla; // Elegir la escena a renderizar aquí
@@ -216,6 +230,8 @@ int main(int argc, char** argv) {
 
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
+
+    
 
 
 #ifdef USE_EMBREE

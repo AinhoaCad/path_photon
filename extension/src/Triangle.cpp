@@ -25,7 +25,12 @@ bool Triangle::intersect(Ray& ray, float& t) const {
 }
 
 Direction Triangle::getPointNormal(Point p) const {
-    // Normal suavizada por coordenadas baricéntricas
+    // Si no queremos suavizado, devolver la normal geométrica del triángulo
+    if (!smoothNormals) {
+        return faceNormal;
+    }
+    
+    // Suavizado: interpolar usando coordenadas baricéntricas
     Vector3 v0v1 = v1 - v0;
     Vector3 v0v2 = v2 - v0;
     Vector3 v0p  = p - v0;
@@ -38,15 +43,17 @@ Direction Triangle::getPointNormal(Point p) const {
 
     float denom = d00 * d11 - d01 * d01;
     if (std::fabs(denom) < 1e-8f) {
-        // Fallback: use flat normal to avoid division by zero in degenerate triangles.
-        Vector3 flat = (v1 - v0).cross(v2 - v0).normalized();
-        return flat.toDirection();
+        return faceNormal;
     }
     float v = (d11 * d20 - d01 * d21) / denom;
     float w = (d00 * d21 - d01 * d20) / denom;
     float u = 1.0f - v - w;
 
     Vector3 n = n0.toVector() * u + n1.toVector() * v + n2.toVector() * w;
+    float len = n.length();
+    if (len < 1e-8f) {
+        return faceNormal;
+    }
     return n.normalized().toDirection();
 }
 

@@ -28,7 +28,7 @@ bool estaEnSombraEmbree(const Point& punto, const Direction& normal, const Light
 }
 
 // Iluminación directa usando Embree (equivalente a calcularIluminacionDirectaBVH)
-static Pixel calcularIluminacionDirectaEmbree(
+Pixel calcularIluminacionDirectaEmbree(
     const Point& origen,
     const Direction& normal,
     const Material& material,

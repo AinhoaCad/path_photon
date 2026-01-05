@@ -9,9 +9,10 @@ bool OBJLoader::loadOBJ(
     Scene& scene,
     const Material& material,
     const Vector3& scale,
-    const Vector3& translation
+    const Vector3& translation,
+    bool smoothNormals
 ) {
-    std::vector<Triangle> triangles = loadOBJTriangles(filepath, material, scale, translation);
+    std::vector<Triangle> triangles = loadOBJTriangles(filepath, material, scale, translation, smoothNormals);
     
     if (triangles.empty()) {
         return false;
@@ -30,7 +31,8 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
     const std::string& filepath,
     const Material& material,
     const Vector3& scale,
-    const Vector3& translation
+    const Vector3& translation,
+    bool smoothNormals
 ) {
     std::vector<Triangle> triangles;
     std::vector<Vector3> vertices;
@@ -109,7 +111,15 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
                     // Normales
                     Direction n0, n1, n2;
                     
-                    if (faceVertices[0].normalIndex != -1 && !normals.empty()) {
+                    // En modo flat, todos los vértices usan la misma normal geométrica
+                    if (!smoothNormals) {
+                        Vector3 e1 = v1 - v0;
+                        Vector3 e2 = v2 - v0;
+                        Direction normal = e1.cross(e2).normalized().toDirection();
+                        n0 = n1 = n2 = normal;
+                    }
+                    // En modo smooth, intentar usar normales del archivo
+                    else if (faceVertices[0].normalIndex != -1 && !normals.empty()) {
                         int nidx0 = resolveIndex(faceVertices[0].normalIndex, normals.size());
                         int nidx1 = resolveIndex(faceVertices[i].normalIndex, normals.size());
                         int nidx2 = resolveIndex(faceVertices[i + 1].normalIndex, normals.size());
@@ -121,21 +131,21 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
                             n1 = normals[nidx1].toDirection();
                             n2 = normals[nidx2].toDirection();
                         } else {
-                            // Calcular normal geométrica
+                            // Fallback a normal geométrica
                             Vector3 e1 = v1 - v0;
                             Vector3 e2 = v2 - v0;
                             Direction normal = e1.cross(e2).normalized().toDirection();
                             n0 = n1 = n2 = normal;
                         }
                     } else {
-                        // Calcular normal geométrica si no hay normales en el archivo
+                        // Sin normales en archivo, usar normal geométrica
                         Vector3 e1 = v1 - v0;
                         Vector3 e2 = v2 - v0;
                         Direction normal = e1.cross(e2).normalized().toDirection();
                         n0 = n1 = n2 = normal;
                     }
 
-                    triangles.emplace_back(v0, v1, v2, n0, n1, n2, material);
+                    triangles.emplace_back(v0, v1, v2, n0, n1, n2, material, smoothNormals);
                 }
             }
         }
