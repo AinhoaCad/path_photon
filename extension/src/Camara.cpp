@@ -6,7 +6,6 @@
 #include "Light.hpp"
 #include "Plane.hpp"
 #include "Renderizador.hpp"
-#include "SceneBVH.hpp"
 #ifdef USE_EMBREE
 #include "SceneEmbree.hpp"
 #endif
@@ -241,62 +240,7 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
 }
 
 
-// ============= NUEVO: generateImageWithLightingBVH =============
-// Versión acelerada con BVH, sin tocar el código anterior
-
-Image Camera::generateImageWithLightingBVH(
-    const SceneBVH& sceneBVH,
-    const std::vector<Light>& lights,
-    int numRays,
-    int maxBounces
-) {
-    Image image(pixelWidth, pixelHeight);
-    srand(static_cast<unsigned>(time(nullptr)));
-
-    for (int y = 0; y < pixelHeight; ++y) {
-        for (int x = 0; x < pixelWidth; ++x) {
-            Pixel acumulado = {0, 0, 0};
-
-            for (int r = 0; r < numRays; ++r) {
-                Ray ray = generateRay(y, x, true);
-                
-                // ✅ CAMBIO PRINCIPAL: Usar BVH en lugar de búsqueda lineal
-                Interseccion inter = sceneBVH.intersect(ray);
-                
-                Pixel color = {0, 0, 0};
-
-                if (inter.hayInterseccion && inter.primitiva) {
-                    // Dirección hacia la cámara desde el punto de impacto
-                    Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
-
-                    // Calcular iluminación global CON BVH
-                    color = calcularIluminacionGlobalBVH(
-                        inter, 
-                        lights, 
-                        sceneBVH, 
-                        wo, 
-                        true, 
-                        0, 
-                        maxBounces
-                    );
-                }
-
-                acumulado.r += color.r;
-                acumulado.g += color.g;
-                acumulado.b += color.b;
-            }
-            
-            // Promediar color de todos los rayos por píxel
-            acumulado.r /= numRays;
-            acumulado.g /= numRays;
-            acumulado.b /= numRays;
-
-            image.setPixel(y, x, acumulado);
-        }
-    }
-
-    return image;
-}
+// Version de BVH con Embree
 
 #ifdef USE_EMBREE
 // Versión acelerada con Embree (triángulos) + fallback analítico

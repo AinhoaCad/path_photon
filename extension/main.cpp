@@ -5,7 +5,6 @@
 #include "Primitive.hpp"
 #include "Material.hpp"
 #include "Triangle.hpp"
-#include "SceneBVH.hpp"
 #ifdef USE_EMBREE
 #include "SceneEmbree.hpp"
 #endif
@@ -193,8 +192,7 @@ int main(int argc, char** argv) {
 
     //image4.writePPM("imagenLuzMultiplesRayosModificaciones.ppm");
 
-
-
+    
     //--------------------------------------------------------
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
@@ -219,50 +217,6 @@ int main(int argc, char** argv) {
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
 
-    
-    //--------------------------------------------------------------
-    // IMAGEN 6: Séptima imagen con BVH, luz, rebotes y modificaciones y BVH MANUAL
-    //--------------------------------------------------------------
-    /*
-    std::cout << "\n[BVH] Creando escena con aceleración BVH...\n";
-    
-    // Crear instancia de SceneBVH con la misma escena
-    SceneBVH sceneBVH(scene);
-    
-    std::cout << "[BVH] Construyendo imagen con BVH...\n";
-    
-    // Generar imagen usando BVH
-    auto startBVH = std::chrono::steady_clock::now();
-
-    Image imageBVH = camera.generateImageWithLightingBVH(
-        sceneBVH,
-        scene.getLights(),
-        numRays,
-        maxBounces
-    );
-
-    auto endBVH = std::chrono::steady_clock::now();
-    
-    // Aplicar las mismas modificaciones
-    Tonemapping::clampPixels(imageBVH);
-    Tonemapping::curvaGamma(imageBVH, 1.0f/1.5f);
-    
-    // Guardar con sufijo "_BVH" para diferenciar
-    std::string outputFileBVH = outputFile;
-    size_t dotPos = outputFileBVH.find_last_of(".");
-    if (dotPos != std::string::npos) {
-        outputFileBVH.insert(dotPos, "_BVH");
-    } else {
-        outputFileBVH += "_BVH";
-    }
-    
-    imageBVH.write(outputFileBVH);
-    auto bvhMs = std::chrono::duration_cast<std::chrono::milliseconds>(endBVH - startBVH).count();
-    std::cout << "[T] Path tracing con BVH: " << bvhMs / 1000.0 << " s\n";
-    std::cout << "[BVH] Imagen guardada en: " << outputFileBVH << "\n";
-    */
-
-    /*
 
 #ifdef USE_EMBREE
     //--------------------------------------------------------------
@@ -301,7 +255,7 @@ int main(int argc, char** argv) {
     std::cout << "[T] Path tracing con Embree: " << embreeMs / 1000.0 << " s\n";
     std::cout << "[Embree] Imagen guardada en: " << outputFileEmbree << "\n";
 #endif
-*/
+
 
 
     //--------------------------------------------------------------
