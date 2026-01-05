@@ -192,7 +192,7 @@ void PhotonMapper::tracePhoton(Ray& ray, Color currentFlux, int depth) {
 
     // if not IS_DELTA: store photon
     if (!material.isEspejoPuro() && !material.isDielectric()) {
-        if (depth > 0) {
+        if (depth > 0) {    //el primer rebote no se almacena
             Photon p;
             p.position = inter.punto.toVector();
             p.directionIncidente = ray.direction_;
