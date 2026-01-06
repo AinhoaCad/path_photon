@@ -42,7 +42,7 @@ Scene createCornellBoxConMalla(bool smoothNormals) {
     return scene;
 }
 
-Scene createCornellBoxConMallaOBJ(const std::string& objFilePath, bool smoothNormals) {
+Scene createCornellBoxConMallaOBJ(const std::string& objFilePath, bool smoothNormals, float trianglePercentage = 100.0f) {
     Scene scene;
 
     // Paredes
@@ -56,19 +56,20 @@ Scene createCornellBoxConMallaOBJ(const std::string& objFilePath, bool smoothNor
     scene.addLight(Light(Vector3(0.0f, 0.6f, 0.0f), Color(1.0f, 1.0f, 1.0f).toPixel()));
 
     // Cargar malla desde archivo OBJ
-    // Parámetros: archivo, material, escala, traslación, suavizado
+    // Parámetros: archivo, material, escala, traslación, suavizado, porcentaje
     bool success = OBJLoader::loadOBJ(
         objFilePath,
         scene,
-        mirrorSpecular,                      // Material
+        purpleDiffuse,                      // Material
 
-        /*Vector3(8.0f, 8.0f, 8.0f),         // Escala CONEJO
-        Vector3(0.0f, -1.0f, 0.0f),        // Traslación*/
+        Vector3(8.0f, 8.0f, 8.0f),         // Escala CONEJO
+        Vector3(0.0f, -1.0f, 0.0f),        // Traslación
 
-        Vector3(0.2f, 0.2f, 0.2f),         // Escala TETERA
-        Vector3(0.0f, -0.5f, 0.0f),        // Traslación 
+        /*Vector3(0.2f, 0.2f, 0.2f),         // Escala TETERA
+        Vector3(0.0f, -0.5f, 0.0f),        // Traslación*/ 
 
-        smoothNormals                       // Flag de suavizado
+        smoothNormals,                      // Flag de suavizado
+        trianglePercentage                  // Porcentaje de triángulos a cargar
     );
 
     if (!success) {
@@ -109,6 +110,13 @@ int main(int argc, char** argv) {
     // ============================================
     bool useSmoothNormals = true;  // true = suavizado | false = plano
     
+    // ============================================
+    // PORCENTAJE DE TRIÁNGULOS A CARGAR
+    // Cambiar aquí el porcentaje de la malla a renderizar (1-100)
+    // Ejemplos: 10, 25, 50, 75, 100
+    // ============================================
+    float trianglePercentage = 25.0f;  // Porcentaje de triángulos a cargar
+    
     Scene scene;
 
     //número de muestras, alto, ancho y nombre de archivo por línea de comandos
@@ -144,10 +152,17 @@ int main(int argc, char** argv) {
     //nombre archivo
     std::string outputFile = argv[4];
 
+    // Validar porcentaje
+    if (trianglePercentage <= 0.0f || trianglePercentage > 100.0f) {
+        std::cerr << "ERROR: El porcentaje debe estar entre 1 y 100.\n";
+        return 1;
+    }
+
     std::cout << "Renderizando con:\n"
               << "  SPP = " << numRays << "\n"
               << "  Resolución = " << width << " x " << height << "\n"
               << "  Archivo = " << outputFile << "\n"
+              << "  Porcentaje malla = " << trianglePercentage << "%\n"
               << "  Normales = " << (useSmoothNormals ? "suavizadas" : "planas (una por triángulo)") << "\n";
 
     //--------------------------------------------------------------
@@ -156,10 +171,10 @@ int main(int argc, char** argv) {
 
     // Crea y ajusta la escena
     Scene CornellBoxConMalla = createCornellBoxConMalla(useSmoothNormals);
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("tetera.obj", useSmoothNormals);
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("conejo.obj", useSmoothNormals, trianglePercentage);
     
 
-    scene = CornellBoxConMalla; // Elegir la escena a renderizar aquí
+    scene = CornellBoxConMallaOBJ; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 

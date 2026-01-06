@@ -16,7 +16,8 @@ public:
         const Material& material,
         const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
         const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f),
-        bool smoothNormals = true
+        bool smoothNormals = true,
+        float trianglePercentage = 100.0f  // Porcentaje de triángulos a cargar (0-100)
     );
 
     // Versión alternativa que devuelve directamente los triángulos
@@ -25,7 +26,8 @@ public:
         const Material& material,
         const Vector3& scale = Vector3(1.0f, 1.0f, 1.0f),
         const Vector3& translation = Vector3(0.0f, 0.0f, 0.0f),
-        bool smoothNormals = true
+        bool smoothNormals = true,
+        float trianglePercentage = 100.0f  // Porcentaje de triángulos a cargar (0-100)
     );
 
 private:

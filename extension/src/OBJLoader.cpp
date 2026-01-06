@@ -10,9 +10,10 @@ bool OBJLoader::loadOBJ(
     const Material& material,
     const Vector3& scale,
     const Vector3& translation,
-    bool smoothNormals
+    bool smoothNormals,
+    float trianglePercentage
 ) {
-    std::vector<Triangle> triangles = loadOBJTriangles(filepath, material, scale, translation, smoothNormals);
+    std::vector<Triangle> triangles = loadOBJTriangles(filepath, material, scale, translation, smoothNormals, trianglePercentage);
     
     if (triangles.empty()) {
         return false;
@@ -23,7 +24,8 @@ bool OBJLoader::loadOBJ(
         scene.addTriangle(tri);
     }
 
-    std::cout << "[OBJ] Cargados " << triangles.size() << " triángulos desde " << filepath << std::endl;
+    std::cout << "[OBJ] Cargados " << triangles.size() << " triángulos desde " << filepath 
+              << " (" << trianglePercentage << "% de la malla)" << std::endl;
     return true;
 }
 
@@ -32,7 +34,8 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
     const Material& material,
     const Vector3& scale,
     const Vector3& translation,
-    bool smoothNormals
+    bool smoothNormals,
+    float trianglePercentage
 ) {
     std::vector<Triangle> triangles;
     std::vector<Vector3> vertices;
@@ -42,6 +45,13 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
     if (!file.is_open()) {
         std::cerr << "[OBJ] Error: No se pudo abrir el archivo " << filepath << std::endl;
         return triangles;
+    }
+
+    // Validar porcentaje
+    if (trianglePercentage <= 0.0f || trianglePercentage > 100.0f) {
+        std::cerr << "[OBJ] Advertencia: Porcentaje inválido " << trianglePercentage 
+                  << "%. Usando 100%." << std::endl;
+        trianglePercentage = 100.0f;
     }
 
     std::string line;
@@ -156,6 +166,17 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
 
     if (triangles.empty()) {
         std::cerr << "[OBJ] Advertencia: No se encontraron triángulos en " << filepath << std::endl;
+    }
+
+    // Aplicar filtro de porcentaje si es necesario
+    if (trianglePercentage < 100.0f) {
+        size_t targetSize = (size_t)(triangles.size() * trianglePercentage / 100.0f);
+        if (targetSize < triangles.size()) {
+            // Usar erase en lugar de resize para evitar constructor sin argumentos
+            triangles.erase(triangles.begin() + targetSize, triangles.end());
+            std::cout << "[OBJ] Reducido a " << triangles.size() << " triángulos (" 
+                      << trianglePercentage << "%)" << std::endl;
+        }
     }
 
     return triangles;
