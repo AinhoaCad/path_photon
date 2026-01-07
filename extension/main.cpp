@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     // Cambiar aquí el porcentaje de la malla a renderizar (1-100)
     // Ejemplos: 10, 25, 50, 75, 100
     // ============================================
-    float trianglePercentage = 25.0f;  // Porcentaje de triángulos a cargar
+    float trianglePercentage = 50.0f;  // Porcentaje de triángulos a cargar
     
     Scene scene;
 
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 
     // Crea y ajusta la escena
     Scene CornellBoxConMalla = createCornellBoxConMalla(useSmoothNormals);
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("conejo.obj", useSmoothNormals, trianglePercentage);
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("conejovn.obj", useSmoothNormals, trianglePercentage);
     
 
     scene = CornellBoxConMallaOBJ; // Elegir la escena a renderizar aquí
@@ -226,6 +226,7 @@ int main(int argc, char** argv) {
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
     
+    
     auto startLinear = std::chrono::steady_clock::now();
 
     Image image5 = camera.generateImageWithLightingMultipleRaysConRebotes(
@@ -245,6 +246,8 @@ int main(int argc, char** argv) {
 
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
+
+    
 
     
 

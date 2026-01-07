@@ -37,17 +37,26 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
     bool smoothNormals,
     float trianglePercentage
 ) {
+    // Vector donde se almacenarán los triángulos finales que se devolverán
     std::vector<Triangle> triangles;
+
+    // Vector de vértices cargados desde el OBJ
     std::vector<Vector3> vertices;
+
+    // Vector de normales cargadas desde el OBJ (vn). Si no hay, se usará normal geométrica
     std::vector<Vector3> normals;
-    
+
+    // Vector auxiliar para calcular normales suavizadas si no hay vn en el OBJ
+    std::vector<Vector3> vertexNormals;
+
+    // Abrir el archivo OBJ
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "[OBJ] Error: No se pudo abrir el archivo " << filepath << std::endl;
         return triangles;
     }
 
-    // Validar porcentaje
+    // Validación del porcentaje de triángulos que queremos cargar
     if (trianglePercentage <= 0.0f || trianglePercentage > 100.0f) {
         std::cerr << "[OBJ] Advertencia: Porcentaje inválido " << trianglePercentage 
                   << "%. Usando 100%." << std::endl;
@@ -57,130 +66,151 @@ std::vector<Triangle> OBJLoader::loadOBJTriangles(
     std::string line;
     int lineNumber = 0;
 
+    // Estructura auxiliar para almacenar las caras mientras leemos el OBJ
+    struct FaceIndices {
+        std::vector<int> posIndices;    // Índices de vértices
+        std::vector<int> normalIndices; // Índices de normales (puede estar vacío)
+    };
+    std::vector<FaceIndices> faces; // Todas las caras del OBJ
+
+    // ===========================================
+    // 1. Lectura de vértices, normales y caras
+    // ===========================================
     while (std::getline(file, line)) {
         lineNumber++;
-        
-        // Eliminar espacios al inicio
+
+        // Saltar líneas vacías o comentarios
         size_t firstNonSpace = line.find_first_not_of(" \t\r\n");
-        if (firstNonSpace == std::string::npos || line[firstNonSpace] == '#') {
-            continue; // Línea vacía o comentario
-        }
+        if (firstNonSpace == std::string::npos || line[firstNonSpace] == '#') continue;
 
         std::istringstream iss(line);
         std::string prefix;
         iss >> prefix;
 
         if (prefix == "v") {
-            // Vértice
+            // Línea de vértice: "v x y z"
             Vector3 vertex;
             if (parseVertex(line, vertex)) {
-                // Aplicar escala y traslación
+                // Aplicar escala y traslación a los vértices
                 vertex.x = vertex.x * scale.x + translation.x;
                 vertex.y = vertex.y * scale.y + translation.y;
                 vertex.z = vertex.z * scale.z + translation.z;
                 vertices.push_back(vertex);
             }
-        }
+        } 
         else if (prefix == "vn") {
-            // Normal
+            // Línea de normal: "vn x y z"
             Vector3 normal;
             if (parseNormal(line, normal)) {
-                normals.push_back(normal.normalized());
+                normals.push_back(normal.normalized()); // Normalizar para seguridad
             }
-        }
+        } 
         else if (prefix == "f") {
-            // Cara
+            // Línea de cara: "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3 ..."
             std::vector<VertexData> faceVertices;
-            if (parseFace(line, faceVertices)) {
-                // Un OBJ puede tener caras con más de 3 vértices (polígonos)
-                // Triangulamos usando fan triangulation
-                if (faceVertices.size() < 3) {
-                    std::cerr << "[OBJ] Advertencia: Cara con menos de 3 vértices en línea " 
-                              << lineNumber << std::endl;
-                    continue;
-                }
+            if (!parseFace(line, faceVertices) || faceVertices.size() < 3) continue;
 
-                // Crear triángulos desde el polígono (fan triangulation)
-                for (size_t i = 1; i < faceVertices.size() - 1; ++i) {
-                    int idx0 = resolveIndex(faceVertices[0].posIndex, vertices.size());
-                    int idx1 = resolveIndex(faceVertices[i].posIndex, vertices.size());
-                    int idx2 = resolveIndex(faceVertices[i + 1].posIndex, vertices.size());
-
-                    if (idx0 < 0 || idx0 >= (int)vertices.size() ||
-                        idx1 < 0 || idx1 >= (int)vertices.size() ||
-                        idx2 < 0 || idx2 >= (int)vertices.size()) {
-                        std::cerr << "[OBJ] Advertencia: Índices de vértice fuera de rango en línea " 
-                                  << lineNumber << std::endl;
-                        continue;
-                    }
-
-                    Point v0 = vertices[idx0].toPoint();
-                    Point v1 = vertices[idx1].toPoint();
-                    Point v2 = vertices[idx2].toPoint();
-
-                    // Normales
-                    Direction n0, n1, n2;
-                    
-                    // En modo flat, todos los vértices usan la misma normal geométrica
-                    if (!smoothNormals) {
-                        Vector3 e1 = v1 - v0;
-                        Vector3 e2 = v2 - v0;
-                        Direction normal = e1.cross(e2).normalized().toDirection();
-                        n0 = n1 = n2 = normal;
-                    }
-                    // En modo smooth, intentar usar normales del archivo
-                    else if (faceVertices[0].normalIndex != -1 && !normals.empty()) {
-                        int nidx0 = resolveIndex(faceVertices[0].normalIndex, normals.size());
-                        int nidx1 = resolveIndex(faceVertices[i].normalIndex, normals.size());
-                        int nidx2 = resolveIndex(faceVertices[i + 1].normalIndex, normals.size());
-
-                        if (nidx0 >= 0 && nidx0 < (int)normals.size() &&
-                            nidx1 >= 0 && nidx1 < (int)normals.size() &&
-                            nidx2 >= 0 && nidx2 < (int)normals.size()) {
-                            n0 = normals[nidx0].toDirection();
-                            n1 = normals[nidx1].toDirection();
-                            n2 = normals[nidx2].toDirection();
-                        } else {
-                            // Fallback a normal geométrica
-                            Vector3 e1 = v1 - v0;
-                            Vector3 e2 = v2 - v0;
-                            Direction normal = e1.cross(e2).normalized().toDirection();
-                            n0 = n1 = n2 = normal;
-                        }
-                    } else {
-                        // Sin normales en archivo, usar normal geométrica
-                        Vector3 e1 = v1 - v0;
-                        Vector3 e2 = v2 - v0;
-                        Direction normal = e1.cross(e2).normalized().toDirection();
-                        n0 = n1 = n2 = normal;
-                    }
-
-                    triangles.emplace_back(v0, v1, v2, n0, n1, n2, material, smoothNormals);
-                }
+            FaceIndices f;
+            for (auto& vd : faceVertices) {
+                f.posIndices.push_back(resolveIndex(vd.posIndex, vertices.size()));
+                f.normalIndices.push_back(resolveIndex(vd.normalIndex, normals.size()));
             }
+            faces.push_back(f);
         }
-        // Ignorar otras líneas (vt, mtllib, usemtl, etc.)
     }
-
     file.close();
 
+    // ===========================================
+    // 2. Preparación de normales de vértices si no hay vn y queremos smooth
+    // ===========================================
+    if (smoothNormals && normals.empty()) {
+        // Inicializamos vector de normales por vértice a cero
+        vertexNormals.resize(vertices.size(), Vector3(0,0,0));
+    }
+
+    // ===========================================
+    // 3. Procesamiento de caras y cálculo de normales
+    // ===========================================
+    for (auto& f : faces) {
+        // Triangulamos polígonos usando "fan triangulation"
+        for (size_t i = 1; i < f.posIndices.size() - 1; ++i) {
+            int idx0 = f.posIndices[0];
+            int idx1 = f.posIndices[i];
+            int idx2 = f.posIndices[i + 1];
+
+            Point v0 = vertices[idx0].toPoint();
+            Point v1 = vertices[idx1].toPoint();
+            Point v2 = vertices[idx2].toPoint();
+
+            // Calcular la normal geométrica de la cara
+            Vector3 e1 = v1 - v0;
+            Vector3 e2 = v2 - v0;
+            Direction faceNormal = e1.cross(e2).normalized().toDirection();
+
+            if (!smoothNormals) {
+                // Flat shading: todos los vértices del triángulo comparten la misma normal
+                triangles.emplace_back(v0, v1, v2, faceNormal, faceNormal, faceNormal, material, false);
+            } 
+            else if (!normals.empty() && f.normalIndices[0] != -1) {
+                // Smooth shading usando normales del archivo (vn)
+                Direction n0 = normals[f.normalIndices[0]].toDirection();
+                Direction n1 = normals[f.normalIndices[i]].toDirection();
+                Direction n2 = normals[f.normalIndices[i + 1]].toDirection();
+                triangles.emplace_back(v0, v1, v2, n0, n1, n2, material, true);
+            } 
+            else {
+                // Smooth shading manual: acumulamos normales por vértice
+                vertexNormals[idx0] += faceNormal.toVector();
+                vertexNormals[idx1] += faceNormal.toVector();
+                vertexNormals[idx2] += faceNormal.toVector();
+            }
+        }
+    }
+
+    // ===========================================
+    // 4. Si usamos suavizado manual, normalizamos y reconstruimos triángulos
+    // ===========================================
+    if (smoothNormals && normals.empty()) {
+        for (auto& vn : vertexNormals) vn = vn.normalized();
+
+        triangles.clear(); // reconstruimos triángulos con normales suavizadas
+        for (auto& f : faces) {
+            for (size_t i = 1; i < f.posIndices.size() - 1; ++i) {
+                int idx0 = f.posIndices[0];
+                int idx1 = f.posIndices[i];
+                int idx2 = f.posIndices[i + 1];
+
+                Point v0 = vertices[idx0].toPoint();
+                Point v1 = vertices[idx1].toPoint();
+                Point v2 = vertices[idx2].toPoint();
+
+                Direction n0 = vertexNormals[idx0].toDirection();
+                Direction n1 = vertexNormals[idx1].toDirection();
+                Direction n2 = vertexNormals[idx2].toDirection();
+
+                triangles.emplace_back(v0, v1, v2, n0, n1, n2, material, true);
+            }
+        }
+    }
+
+    // ===========================================
+    // 5. Aplicar filtro de porcentaje de triángulos
+    // ===========================================
+    if (trianglePercentage < 100.0f && !triangles.empty()) {
+        size_t targetSize = (size_t)(triangles.size() * trianglePercentage / 100.0f);
+        triangles.erase(triangles.begin() + targetSize, triangles.end());
+        std::cout << "[OBJ] Reducido a " << triangles.size() << " triángulos (" 
+                  << trianglePercentage << "%)" << std::endl;
+    }
+
+    // Advertencia si no se cargó ningún triángulo
     if (triangles.empty()) {
         std::cerr << "[OBJ] Advertencia: No se encontraron triángulos en " << filepath << std::endl;
     }
 
-    // Aplicar filtro de porcentaje si es necesario
-    if (trianglePercentage < 100.0f) {
-        size_t targetSize = (size_t)(triangles.size() * trianglePercentage / 100.0f);
-        if (targetSize < triangles.size()) {
-            // Usar erase en lugar de resize para evitar constructor sin argumentos
-            triangles.erase(triangles.begin() + targetSize, triangles.end());
-            std::cout << "[OBJ] Reducido a " << triangles.size() << " triángulos (" 
-                      << trianglePercentage << "%)" << std::endl;
-        }
-    }
-
     return triangles;
 }
+
 
 bool OBJLoader::parseVertex(const std::string& line, Vector3& vertex) {
     std::istringstream iss(line);
