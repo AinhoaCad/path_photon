@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
     Scene CornellBoxFlotanteArea = createCornellBoxFlotanteArea();
     Scene CornellBoxMaterialesRaros2 = createCornellBoxMaterialesRaros2();
 
-    scene = CornellBoxCausticas; // Elegir la escena a renderizar aquí
+    scene = CornellBoxBasica; // Elegir la escena a renderizar aquí
     // Configurar la cámara
     Camera camera = CameraConfiguration(width, height);
 

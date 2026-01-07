@@ -1,4 +1,5 @@
 #include <cstdlib> // Para rand()
+#include <random>
 #include "Renderizador.hpp"
 
 //---------------------------------------------------------
@@ -12,6 +13,12 @@ float randomOffset(float pixelSize) {
     // Luego multiplicamos por el tamaño del píxel para obtener el offset real
     double r = (double)rand() / RAND_MAX;  
     return pixelSize * (r * 2.0 - 1.0);    
+}
+
+float randomOffsetHilos(float pixelSize, std::mt19937& rng) {
+    // Offset uniforme dentro del píxel: [-0.5, 0.5] * pixelSize
+    std::uniform_real_distribution<float> dist(-0.5f, 0.5f);
+    return dist(rng) * pixelSize;
 }
 
 bool hayLuzPuntual(const std::vector<Light>& lights) {
@@ -389,7 +396,8 @@ Pixel calcularReboteIndirecto(
     const std::vector<Primitive*>& primitives,
     const std::vector<Light>& lights,
     int depth,
-    int maxBounces
+    int maxBounces,
+    std::mt19937& rng
 ) {
     if (depth >= maxBounces) return {0,0,0};
 
@@ -425,7 +433,7 @@ Pixel calcularReboteIndirecto(
         }else{
             Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
             Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                                newWo, primitives, lights, depth+1, maxBounces);
+                                                newWo, primitives, lights, depth+1, maxBounces,rng);
             indirecto.r = rec.r * weight.R;
             indirecto.g = rec.g * weight.G;
             indirecto.b = rec.b * weight.B;
@@ -447,7 +455,8 @@ Pixel calcularIluminacionGlobal(
     const Direction& wo,
     bool incluirIndirecta,
     int depth,
-    int maxBounces
+    int maxBounces,
+    std::mt19937& rng
 ) {
     Pixel colorTotal = {0,0,0};
     const Material& material = inter.primitiva->getMaterial();
@@ -477,7 +486,7 @@ Pixel calcularIluminacionGlobal(
     // --- Rebote indirecto ---
     if (incluirIndirecta && depth < maxBounces) {
         Pixel indirecta = calcularReboteIndirecto(inter.punto, inter.normal, material,
-                                                  wo, primitives, luces, depth, maxBounces);
+                                                  wo, primitives, luces, depth, maxBounces, rng);
         colorTotal.r += indirecta.r;
         colorTotal.g += indirecta.g;
         colorTotal.b += indirecta.b;

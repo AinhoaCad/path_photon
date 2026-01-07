@@ -1,4 +1,5 @@
 #pragma once
+#include<random>
 #include "Ray.hpp"
 #include "Primitive.hpp"
 #include "Image.hpp"
@@ -19,6 +20,8 @@ struct Interseccion {
 
 
 float randomOffset(float pixelSize);
+
+float randomOffsetHilos(float pixelSize,std::mt19937& rng);
 
 bool hayLuzPuntual(const std::vector<Light>& lights);
 
@@ -61,7 +64,8 @@ Pixel calcularIluminacionGlobal(
     const Direction& wo,       
     bool incluirIndirecta,
     int depth,
-    int maxBounces
+    int maxBounces,
+    std::mt19937& rng 
 );
 
 Pixel calcularReboteIndirecto(
@@ -72,7 +76,8 @@ Pixel calcularReboteIndirecto(
     const std::vector<Primitive*>& primitives,
     const std::vector<Light>& lights,
     int depth,
-    int maxBounces
+    int maxBounces,
+    std::mt19937& rng 
 );
 // ============= VERSIONES CON BVH (opcionales) =============
 class SceneBVH; // Forward declaration

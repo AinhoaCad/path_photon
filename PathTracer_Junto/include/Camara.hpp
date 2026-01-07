@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include "Point.hpp"
 #include "Direction.hpp"
 #include "Operations.hpp"
@@ -27,6 +28,9 @@ public:
 
     // Método para generar un rayo hacia el centro de un píxel dado (i, j)
     Ray generateRay(int i, int j, bool multipleSamples);
+
+    // Método para generar un rayo hacia el centro de un píxel dado (i, j)
+    Ray generateRayHilos(int i, int j, bool multipleSamples,std::mt19937& rng);
 
     Image generateImage(const std::vector<Primitive*>& primitives);
     Image generateImageMultipleRays(const std::vector<Primitive*>& primitives, int numRays);

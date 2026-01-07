@@ -1,4 +1,7 @@
 #include <vector>
+#include <thread>
+#include <atomic>
+#include <random>
 #include "Operations.hpp"
 #include "Camara.hpp"
 #include "Material.hpp"
@@ -33,6 +36,55 @@ Ray Camera::generateRay(int i, int j, bool multipleSamples) {
     if (multipleSamples) {
         pixelX += randomOffset(onepixelWidth);
         pixelY += randomOffset(onepixelHeight);
+    }
+
+    // Dirección del rayo en coordenadas locales de cámara:
+    // (desde el origen (0,0,0) hasta el punto del plano (pixelX, pixelY, 1))
+    //EN COORDENADAS LOCALES DE CÁMARA
+    Direction rayDirLocal(pixelX, pixelY, 1.0f);
+
+    // Normalizamos la direccion
+    rayDirLocal = Operations::norm(rayDirLocal); 
+
+
+    // -------- TRANSFORMACIÓN A COORDENADAS GLOBALES--------
+    // La cámara tiene su propio sistema de referencia (left, up, forward, origen).
+    // Creamos la matriz que transforma de espacio de cámara → espacio global.
+    std::vector<Matrix> matrices = {
+        left.getHomMatrix(),
+        up.getHomMatrix(),
+        forward.getHomMatrix(),
+        origen.getHomMatrix()
+    };
+    Matrix cameraToWorld(matrices); 
+
+    // Transformamos la dirección local al sistema de coordenadas global.
+    Matrix rayHom = cameraToWorld * rayDirLocal.getHomMatrix();
+    Direction rayDirWorld(rayHom);
+
+    // -------- CONSTRUCCIÓN DEL RAYO FINAL --------
+    // El rayo se define por:
+    // - Origen: posición de la cámara en coordenadas globales.
+    // - Dirección: vector rayDirWorld, que está en coordenadas globales.
+    return Ray(origen.toVector(), rayDirWorld.toVector());
+}
+
+// Genera un rayo desde la cámara hacia un píxel
+Ray Camera::generateRayHilos(int i, int j, bool multipleSamples,std::mt19937& rng) {
+
+    // -------- GENERACIÓN DE RAYO EN COORDENADAS DE LA CÁMARA --------
+    // En el sistema de cámara:
+    // - El origen de todos los rayos es (0, 0, 0).
+    // - Cada rayo apunta hacia un punto distinto del plano de imagen (pixelX, pixelY, 1).
+
+    // Calcular el centro del píxel (i, j) en coordenadas de la cámara
+    float pixelX = -(i + 0.5f) * onepixelWidth + anchoPlano / 2.0f;
+    float pixelY = -(j + 0.5f) * onepixelHeight + altoPlano / 2.0f;
+
+    // Si se activan múltiples muestras por píxel añadimos un pequeño desplazamiento aleatorio dentro del área del píxel
+    if (multipleSamples) {
+        pixelX += randomOffsetHilos(onepixelWidth, rng);
+        pixelY += randomOffsetHilos(onepixelHeight, rng);
     }
 
     // Dirección del rayo en coordenadas locales de cámara:
@@ -199,38 +251,64 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     int maxBounces
 ) {
     Image image(pixelWidth, pixelHeight);
-    srand(static_cast<unsigned>(time(nullptr)));
 
-    for (int y = 0; y < pixelHeight; ++y) {
-        for (int x = 0; x < pixelWidth; ++x) {
-            Pixel acumulado = {0,0,0};
+    //srand(static_cast<unsigned>(time(nullptr)));
 
-            for (int r = 0; r < numRays; ++r) {
-                Ray ray = generateRay(y, x, true);
-                Interseccion inter = calcularInterseccionMasCercana(ray, primitives);
-                Pixel color = {0,0,0};
+    const int numThreads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    std::atomic<int> nextRow(0);
 
-                if (inter.hayInterseccion && inter.primitiva) {
+    auto worker = [&](int threadId) {
 
-                    //Direccion hacia la camara desde el punto de impacto
-                    Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+        // RNG independiente por hilo
+        std::mt19937 rng(
+            std::random_device{}() + threadId
+        );
 
-                    // Calcular iluminación global, incluyendo rebotes indirectos
-                    color = calcularIluminacionGlobal(inter, lights, primitives, wo, true, 0, maxBounces);
+        while (true){
+            int y = nextRow.fetch_add(1);
+            if (y >= pixelHeight) break;
+
+            for (int x = 0; x < pixelWidth; ++x) {
+                Pixel acumulado = {0,0,0};
+
+                for (int r = 0; r < numRays; ++r) {
+                    Ray ray = generateRayHilos(y, x, true, rng);
+                    Interseccion inter = calcularInterseccionMasCercana(ray, primitives);
+                    Pixel color = {0,0,0};
+
+                    if (inter.hayInterseccion && inter.primitiva) {
+
+                        //Direccion hacia la camara desde el punto de impacto
+                        Direction wo = Operations::mult(ray.direction_.toDirection(), -1.0f);
+
+                        // Calcular iluminación global, incluyendo rebotes indirectos
+                        color = calcularIluminacionGlobal(inter, lights, primitives, wo, true, 0, maxBounces, rng);
+                    }
+
+                    acumulado.r += color.r;
+                    acumulado.g += color.g;
+                    acumulado.b += color.b;
                 }
+                
+                // Promediar color de todos los rayos por píxel
+                acumulado.r /= numRays;
+                acumulado.g /= numRays;
+                acumulado.b /= numRays;
 
-                acumulado.r += color.r;
-                acumulado.g += color.g;
-                acumulado.b += color.b;
+                image.setPixel(y, x, acumulado);
             }
-            
-            // Promediar color de todos los rayos por píxel
-            acumulado.r /= numRays;
-            acumulado.g /= numRays;
-            acumulado.b /= numRays;
-
-            image.setPixel(y, x, acumulado);
         }
+    };
+
+    // Lanzar hilos
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back(worker, i);
+    }
+
+    // Esperar a que terminen
+    for (auto& t : threads) {
+        t.join();
     }
 
     return image;
