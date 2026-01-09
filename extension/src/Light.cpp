@@ -140,10 +140,14 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
 // ----------- Métodos de área rectangular -----------
 
 Pixel Light::calcularRadianciaRectangular() const {
-    // Si no es área, devolvemos la potencia directamente
-    //if (width == 0 || height == 0) return power;
+    
+    //Devolvemos power directamente 
     
     return power;
+
+    // Si no es área, devolvemos la potencia directamente
+    //if (width == 0 || height == 0) return power;
+
     /*float area = width * height;
     return Pixel{
         power.r / (area * float(M_PI)),

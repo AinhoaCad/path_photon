@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     // Cambiar aquí el porcentaje de la malla a renderizar (1-100)
     // Ejemplos: 10, 25, 50, 75, 100
     // ============================================
-    float trianglePercentage = 50.0f;  // Porcentaje de triángulos a cargar
+    float trianglePercentage = 100.0f;  // Porcentaje de triángulos a cargar
     
     Scene scene;
 
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
 
     
-
+    
     
 
 

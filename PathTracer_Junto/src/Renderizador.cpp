@@ -201,11 +201,24 @@ Pixel calcularIluminacion(
 
 }
 
-//---------------------------------------------------------
-//FUNCIONES PARA RENDERIZADO CON REBOTE INDIRECTO
-//---------------------------------------------------------
-
-// ---------------- Muestreo de nueva dirección según material ----------------
+// ---------------------------------------------------------
+// Muestreo de nueva dirección según material (Monte Carlo)
+// ---------------------------------------------------------
+// En esta función resolvemos UN paso del estimador de Monte Carlo
+// para la iluminación indirecta en un vértice del camino.
+//
+// Ecuación de Render (forma integral):
+//   L_o = ∫_Ω f_r(ω_i, ω_o) · L_i(ω_i) · cosθ dω_i
+//
+// Estimador Monte Carlo con una muestra:
+//   L_o ≈ [ (f_r · cosθ) / p(ω_i) ] · L_i(ω_i)
+//
+// Esta función devuelve el término entre corchetes:
+//   weight = (f_r · cosθ) / p(ω_i)
+//
+// Además:
+//   - nextDir  → dirección incidente muestreada ω_i
+//   - isDelta  → indica si el material es delta (espejo / dieléctrico)
 void muestrearDireccionRebote(
     const Material& material,
     const Direction& normal,
@@ -214,116 +227,101 @@ void muestrearDireccionRebote(
     Color& weight,
     bool& isDelta
 ) {
+    // Dirección incidente hacia la superficie
     Direction incident = Operations::mult(wo, -1.0f);
 
-    // ---------------- Espejo puro ----------------
+    // =====================================================
+    // ESPEJO PURO (BRDF Delta)
+    // =====================================================
+    // En un material especular ideal la BRDF es una delta:
+    // solo existe una única dirección válida (reflexión perfecta).
+    //
+    // La integral desaparece y no hay PDF continua.
+    // El estimador se reduce directamente al coeficiente especular:
+    //   weight = k_s
     if (material.isEspejoPuro()) {
         nextDir = Operations::reflect(incident, normal);
-        weight = material.ks;
+        weight  = material.ks;
         isDelta = true;
         return;
     }
 
-    // ---------------- Dieléctrico ----------------
+    // =====================================================
+    // DIELÉCTRICO (Reflexión / Refracción Delta)
+    // =====================================================
     if (material.isDielectric()) {
 
-        // La función refract ahora maneja internamente el ajuste de normal y eta
-        // Solo necesitamos pasar la normal original y los índices base
         Direction n = normal;
         bool entering = (Operations::dot(incident, n) < 0.0f);
-        
-        float etaI = 1.0f;           // Índice del aire
-        float etaT = material.ior;   // Índice del material
+
+        float etaI = 1.0f;          // Índice del aire
+        float etaT = material.ior;  // Índice del material
 
         Vector3 refracted;
-        // Intenta refracción (necesario para detectar TIR)
-        bool canRefract = Operations::refract(incident.toVector(), n.toVector(), etaI, etaT, refracted);
+        bool canRefract = Operations::refract(
+            incident.toVector(),
+            n.toVector(),
+            etaI,
+            etaT,
+            refracted
+        );
 
+        // ---------------- Reflexión Interna Total ----------------
         if (!canRefract) {
-            // --- REFLEXIÓN INTERNA TOTAL (TIR) ---
             Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
             nextDir = Operations::reflect(incident, reflectNormal);
-            weight = material.ks; // Usamos k_s como peso reflejado
+            weight  = material.ks;
             isDelta = true;
             return;
         }
 
-        // Usamos la energía (k_s, k_t) para la probabilidad simplificada
+        // Ruleta Rusa entre reflexión y refracción.
+        // Dividir el peso por la probabilidad mantiene el estimador insesgado:
+        //   E[X] = P · (X / P) = X
         float Er = std::max({material.ks.R, material.ks.G, material.ks.B});
         float Et = std::max({material.kt.R, material.kt.G, material.kt.B});
-        float sumE = Er + Et;
+        float sumE = std::max(Er + Et, 1.0f);
 
-        if (sumE <= 0.0f) sumE = 1.0f; // evitar cero
+        float Pr = Er / sumE;  // Probabilidad de reflexión
+        float Pt = Et / sumE;  // Probabilidad de refracción
 
-        float Pr = Er / sumE; // Probabilidad de Reflejar
-        float Pt = Et / sumE; // Probabilidad de Refractar
-
-        //--------------Ruleta Rusa---------------
         float xi = static_cast<float>(rand()) / RAND_MAX;
 
         if (xi < Pr) {
-            // --- REFLEXIÓN (comportamiento igual que espejo)---
+            // ---------------- Reflexión ----------------
             Direction reflectNormal = entering ? n : Operations::mult(n, -1.0f);
             nextDir = Operations::reflect(incident, reflectNormal);
-            // Weight = k_s / P_r
-            weight = Color(
-                material.ks.R / std::max(Pr, 1e-6f),
-                material.ks.G / std::max(Pr, 1e-6f),
-                material.ks.B / std::max(Pr, 1e-6f)
-            );
+            weight  = material.ks / std::max(Pr, 1e-6f);
         } else {
-            // --- REFRACCIÓN ---
-            nextDir = refracted;
-            // Determinar la dirección del cambio de medio
+            // ---------------- Refracción ----------------
+            // Corrección de radiancia por cambio de medio:
+            //   (η_i / η_t)^2
             float etaRatio = entering ? (etaI / etaT) : (etaT / etaI);
-            // Corrección por cambio de fase (eta_i/eta_t)^2
-            float etaCorr = etaRatio * etaRatio; 
-            // Weight = (k_t * Corrección_eta) / P_t
-            weight = Color(
-                (material.kt.R * etaCorr) / std::max(Pt, 1e-6f),
-                (material.kt.G * etaCorr) / std::max(Pt, 1e-6f),
-                (material.kt.B * etaCorr) / std::max(Pt, 1e-6f)
-            );
+            float etaCorr  = etaRatio * etaRatio;
+
+            nextDir = refracted;
+            weight  = (material.kt * etaCorr) / std::max(Pt, 1e-6f);
         }
 
-        isDelta = true; 
+        isDelta = true;
         return;
     }
 
-    // ---------------- Plástico (difuso + especular) ----------------
-    if (material.isPlastic()) {
-        float Ed = std::max({material.kd.R, material.kd.G, material.kd.B});
-        float Es = std::max({material.ks.R, material.ks.G, material.ks.B});
-        float sum = Ed + Es;
-        if (sum <= 0.0f) sum = 1.0f;
-
-        float Pd = Ed / sum;
-        float Ps = Es / sum;
-
-        //-------------Ruleta Rusa--------------------------
-        float xi = static_cast<float>(rand()) / RAND_MAX;
-        if (xi < Ps) {
-
-            // Comportamiento espejo
-            nextDir = Operations::reflect(incident, normal);
-            weight = Color(material.ks.R / std::max(Ps, 0.05f),
-                           material.ks.G / std::max(Ps, 0.05f),
-                           material.ks.B / std::max(Ps, 0.05f));
-            isDelta = true;
-        } else {
-            // Comportamiento difuso
-            nextDir = Operations::randomHemisphereDirection(normal);
-            weight = Color(material.kd.R / std::max(Pd, 0.05f),
-                           material.kd.G / std::max(Pd, 0.05f),
-                           material.kd.B / std::max(Pd, 0.05f));
-            isDelta = false;
-        }
-        return;
-    }
-
-    // ---------------- Difuso puro ----------------
+    // =====================================================
+    // DIFUSO PURO (Lambertiano)
+    // =====================================================
+    // Usamos muestreo coseno-ponderado:
+    //   f_r = k_d / π
+    //   p(ω_i) = cosθ / π
+    //
+    // Sustituyendo en el estimador:
+    //   weight = (f_r · cosθ) / p(ω_i)
+    //          = [ (k_d / π) · cosθ ] / [ cosθ / π ]
+    //          = k_d
+    //
+    // El coseno y π se cancelan exactamente.
     nextDir = Operations::randomHemisphereDirection(normal);
-    weight = material.kd;
+    weight  = material.kd;
     isDelta = false;
 }
 
@@ -388,6 +386,17 @@ Pixel calcularIluminacionDirecta(
 
 
 // ---------------- Rebote indirecto ----------------
+// ---------------------------------------------------------
+// Rebote indirecto (Path Tracing recursivo)
+// ---------------------------------------------------------
+// Esta función evalúa la iluminación indirecta L_ind en un punto
+// usando Path Tracing con Monte Carlo.
+//
+// Implementa la parte:
+//   ∫_Ω f_r(x, ω_i, ω_o) · L_i(x, ω_i) · cosθ dω_i
+//
+// aproximada mediante:
+//   UNA muestra por vértice + recursión
 Pixel calcularReboteIndirecto(
     const Point& origen,
     const Direction& normal,
@@ -399,47 +408,120 @@ Pixel calcularReboteIndirecto(
     int maxBounces,
     std::mt19937& rng
 ) {
-    if (depth >= maxBounces) return {0,0,0};
+    // ---------------- Condición de parada ----------------
+    // Limitamos la profundidad del camino para evitar recursión infinita
+    if (depth >= maxBounces)
+        return {0, 0, 0};
 
-    Pixel colorDirecto = calcularIluminacionDirecta(origen, normal, material, wo, primitives, lights);
+    // ---------------- Iluminación directa ----------------
+    // Esta parte NO es Monte Carlo hemisférico:
+    // corresponde al término de luces explícitas (NEE / shadow rays)
+    //
+    // Se suma aquí porque, desde el punto de vista de la ecuación,
+    // la radiancia entrante puede venir:
+    //  - directamente de luces
+    //  - indirectamente de otras superficies
+    Pixel colorDirecto = calcularIluminacionDirecta(
+        origen, normal, material, wo, primitives, lights
+    );
 
+    // ---------------- Muestreo Monte Carlo ----------------
+    // Aquí construimos UNA muestra del estimador MC:
+    //  - Elegimos una dirección ω_i
+    //  - Calculamos el peso (f_r · cosθ) / p(ω_i)
     Direction nextDir;
     Color weight;
     bool isDelta = false;
-    muestrearDireccionRebote(material, normal, wo, nextDir, weight, isDelta);
 
+    muestrearDireccionRebote(
+        material,
+        normal,
+        wo,
+        nextDir,
+        weight,
+        isDelta
+    );
+
+    // ---------------- Ruleta Rusa ----------------
+    // Para materiales NO delta (difusos / glossy),
+    // aplicamos Russian Roulette para terminar caminos largos.
+    //
+    // La probabilidad se basa en la energía del peso.
+    // Si el camino sobrevive, dividimos por la probabilidad
+    // para mantener el estimador insesgado.
     float maxWeight = std::max({weight.R, weight.G, weight.B, 0.05f});
 
-    // Russian Roulette para evitar caminos muy largos de difusos
-    if (!isDelta /*&& depth > 2*/) {
+    if (!isDelta) {
         float xi = static_cast<float>(rand()) / RAND_MAX;
-        if (xi > maxWeight) return colorDirecto;
+        if (xi > maxWeight)
+            return colorDirecto; // Camino terminado
+
+        // Corrección de energía (X / P)
         weight.R /= maxWeight;
         weight.G /= maxWeight;
         weight.B /= maxWeight;
     }
 
-    Point nextOrigin = Operations::add(origen, Operations::mult(nextDir, 0.001f));
+    // ---------------- Lanzamiento del siguiente rayo ----------------
+    // Esto representa L_i(x, ω_i) en la ecuación:
+    // la radiancia que llega desde la dirección muestreada
+    Point nextOrigin = Operations::add(
+        origen,
+        Operations::mult(nextDir, 0.001f) // evitar auto-intersección
+    );
+
     Ray nextRay(nextOrigin.toVector(), nextDir.toVector());
     Interseccion inter = calcularInterseccionMasCercana(nextRay, primitives);
 
-    Pixel indirecto = {0,0,0};
+    Pixel indirecto = {0, 0, 0};
+
     if (inter.hayInterseccion && inter.primitiva) {
+
+        // ---------------- Caso: alcanzamos una luz ----------------
+        // L_i es directamente la emisión de la luz
         if (inter.primitiva->emitsLight()) {
+
             Plane* emisiva = static_cast<Plane*>(inter.primitiva);
             Pixel emision = emisiva->getAreaLight().calcularRadianciaRectangular();
-            
+
+            // IMPORTANTE:
+            // Aquí NO multiplicamos por el peso todavía.
+            // El peso se aplica al volver de la recursión.
             indirecto = emision;
-        }else{
-            Direction newWo = Operations::mult(nextRay.direction_.toDirection(), -1.0f);
-            Pixel rec = calcularReboteIndirecto(inter.punto, inter.normal, inter.primitiva->getMaterial(),
-                                                newWo, primitives, lights, depth+1, maxBounces,rng);
+
+        } else {
+            // ---------------- Caso: otra superficie ----------------
+            // Evaluamos recursivamente L_o en el siguiente punto
+            Direction newWo = Operations::mult(
+                nextRay.direction_.toDirection(),
+                -1.0f
+            );
+
+            Pixel rec = calcularReboteIndirecto(
+                inter.punto,
+                inter.normal,
+                inter.primitiva->getMaterial(),
+                newWo,
+                primitives,
+                lights,
+                depth + 1,
+                maxBounces,
+                rng
+            );
+
+            // ---------------- Aplicación del peso ----------------
+            // Aquí es donde se evalúa el estimador MC completo:
+            //
+            //   L_ind ≈ weight · L_i
+            //
             indirecto.r = rec.r * weight.R;
             indirecto.g = rec.g * weight.G;
             indirecto.b = rec.b * weight.B;
         }
     }
 
+    // ---------------- Suma final ----------------
+    // L_o = L_directa + L_indirecta
     Pixel total;
     total.r = colorDirecto.r + indirecto.r;
     total.g = colorDirecto.g + indirecto.g;
@@ -447,7 +529,10 @@ Pixel calcularReboteIndirecto(
 
     return total;
 }
+
 // ---------------- Iluminación global unificada ----------------
+
+//Ecuacion de Render : Lo(x, wo) = Le(x, wo) + ∫_Ω f_r(x, wi, wo) Li(x, wi) |n·wi| dwi
 Pixel calcularIluminacionGlobal(
     const Interseccion& inter,
     const std::vector<Light>& luces,
@@ -462,6 +547,7 @@ Pixel calcularIluminacionGlobal(
     const Material& material = inter.primitiva->getMaterial();
 
     // --- Emisión propia ---
+    // Termino Le(x, wo)
     if (inter.primitiva->emitsLight()) {
         Plane* emisiva = static_cast<Plane*>(inter.primitiva);
         Pixel emision = emisiva->getAreaLight().calcularRadianciaRectangular();
@@ -469,8 +555,14 @@ Pixel calcularIluminacionGlobal(
         return emision;
     }
 
+    //Separamos la integral : ∫_Ω = ∫_Ω_luces_directa + ∫_Ω_luces_indirectas
+
     // --- Iluminación directa: solo si no es delta---
-    
+    //Parte de la ecuacion ∫_Ω_luces_directa f_r(x, wi, wo) Li(x, wi) |n·wi| dwi
+
+    /*IMPORTANTE: Descartamos materiales deltas porque la probabilidad de que un rayo lanzado directamente a una luz puntual coincida 
+    con la única dirección de reflexión/refracción perfecta es cero. Estos materiales se calculan exclusivamente 
+    a través del rebote indirecto. */
     if (!material.isEspejoPuro() && !material.isDielectric()) {
         Pixel directa = calcularIluminacionDirecta(inter.punto, inter.normal, material, wo, primitives, luces);
         // En principio no hace fatlta multiplicar por kd para preservar color
@@ -484,6 +576,7 @@ Pixel calcularIluminacionGlobal(
     }
 
     // --- Rebote indirecto ---
+    //Parte de la ecuacion ∫_Ω_luces_indirectas f_r(x, wi, wo) Li(x, wi) |n·wi| dwi
     if (incluirIndirecta && depth < maxBounces) {
         Pixel indirecta = calcularReboteIndirecto(inter.punto, inter.normal, material,
                                                   wo, primitives, luces, depth, maxBounces, rng);
