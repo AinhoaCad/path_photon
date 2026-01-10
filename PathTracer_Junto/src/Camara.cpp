@@ -119,7 +119,7 @@ Ray Camera::generateRayHilos(int i, int j, bool multipleSamples,std::mt19937& rn
 }
 
 // IMAGEN 0: Primera imagen sin luz y un rayo por pixel
-Image Camera::generateImage(const std::vector<Primitive*>& primitives) {
+/*Image Camera::generateImage(const std::vector<Primitive*>& primitives) {
     Image image(pixelWidth, pixelHeight);
 
     // Recorremos la imagen píxel por píxel
@@ -239,7 +239,7 @@ Image Camera::generateImageWithLightingMultipleRays(const std::vector<Primitive*
     }
 
     return image;
-}
+}*/
 
 
 // ------------- generateImageWithLightingMultipleRaysConRebotes -------------
@@ -251,8 +251,6 @@ Image Camera::generateImageWithLightingMultipleRaysConRebotes(
     int maxBounces
 ) {
     Image image(pixelWidth, pixelHeight);
-
-    //srand(static_cast<unsigned>(time(nullptr)));
 
     const int numThreads = std::thread::hardware_concurrency();
     std::vector<std::thread> threads;

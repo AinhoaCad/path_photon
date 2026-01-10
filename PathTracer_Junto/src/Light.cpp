@@ -47,7 +47,7 @@ float Light::LambertianCos(Direction normal, Point p) const {
     return coseno;
 }
 
-Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
+/*Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
     Pixel intensidad = calcularIntensidadLuz(p);
     float coseno = LambertianCos(normal, p);
     Pixel brdf = BRDF(color);
@@ -56,7 +56,7 @@ Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
         (intensidad.g * brdf.g * coseno),
         (intensidad.b * brdf.b * coseno)
     };
-}
+}*/
 
 // ---------------- Cálculo de la contribución de la luz puntual
 // Esta función corresponde a calcular el término:
@@ -163,20 +163,11 @@ Pixel Light::calcularLuzBSDF(
 // ----------- Métodos de área rectangular -----------
 
 Pixel Light::calcularRadianciaRectangular() const {
-    // Si no es área, devolvemos la potencia directamente
-    //if (width == 0 || height == 0) return power;
-    
     return power;
-    /*float area = width * height;
-    return Pixel{
-        power.r / (area * float(M_PI)),
-        power.g / (area * float(M_PI)),
-        power.b / (area * float(M_PI))
-    };*/
 }
 
 
-Point Light::samplePointOnArea(float xi1, float xi2) const {
+/*Point Light::samplePointOnArea(float xi1, float xi2) const {
     // Si no es área, devolvemos el origen
     if (width == 0 || height == 0) return origen;
 
@@ -191,7 +182,7 @@ Point Light::samplePointOnArea(float xi1, float xi2) const {
 
     Vector3 sample = origen.toVector() + tangent * dx + bitangent * dy;
     return Point(sample);
-}
+}*/
 
 Pixel Light::calcularIntensidadLuz(Point p, const Point& lightSample) const {
     double dist2 = pow(Operations::mod(Operations::sub(lightSample, p)), 2);
@@ -202,7 +193,7 @@ Pixel Light::calcularIntensidadLuz(Point p, const Point& lightSample) const {
 }
 
 
-Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const Point& lightSample) const {
+/*Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const Point& lightSample) const {
     // ===============================
     // 1️⃣ Radiancia emitida L_e
     // ===============================
@@ -248,4 +239,4 @@ Pixel Light::calcularLuzAreaSample(Point p, Direction normal, Pixel color, const
     contrib.b = Le.b * brdf.b * cosThetaSurface * cosThetaLight / dist2;
 
     return contrib;
-}
+}*/

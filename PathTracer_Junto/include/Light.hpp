@@ -43,7 +43,7 @@ public:
     float LambertianCos(Direction normal, Point p) const;
 
     // Luz total recibida en un punto p con normal y color dados
-    Pixel calcularLuz(Point p, Direction normal, Pixel color) const;
+    //Pixel calcularLuz(Point p, Direction normal, Pixel color) const;
 
     Pixel calcularLuzBSDF(Point p, Direction normal, const Material& material, const Direction& wi, const Direction& wo) const;
 
@@ -54,11 +54,11 @@ public:
     Pixel calcularRadianciaRectangular() const;
 
     // Devuelve un punto aleatorio dentro del área rectangular
-    Point samplePointOnArea(float xi1, float xi2) const;
+    //Point samplePointOnArea(float xi1, float xi2) const;
 
     // Intensidad desde un punto muestreado en el área
     Pixel calcularIntensidadLuz(Point p, const Point& lightSample) const;
 
     // Luz difusa usando un punto muestreado en el área
-    Pixel calcularLuzAreaSample(Point p, Direction normal, Pixel color, const Point& lightSample) const;
+    //Pixel calcularLuzAreaSample(Point p, Direction normal, Pixel color, const Point& lightSample) const;
 };

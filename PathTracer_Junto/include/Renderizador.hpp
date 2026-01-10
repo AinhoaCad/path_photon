@@ -35,7 +35,7 @@ Interseccion calcularInterseccionMasCercana(Ray& ray, const std::vector<Primitiv
 bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz, const std::vector<Primitive*>& primitives);
 
 // Calcula la iluminación total de un punto (difusa + emisiva)
-Pixel calcularIluminacion(const Interseccion& inter, const std::vector<Light>& luces, const std::vector<Primitive*>& primitives);
+//Pixel calcularIluminacion(const Interseccion& inter, const std::vector<Light>& luces, const std::vector<Primitive*>& primitives);
 
 // Calcula la iluminación directa en un punto desde todas las luces
 Pixel calcularIluminacionDirecta(
@@ -79,60 +79,3 @@ Pixel calcularReboteIndirecto(
     int maxBounces,
     std::mt19937& rng 
 );
-// ============= VERSIONES CON BVH (opcionales) =============
-class SceneBVH; // Forward declaration
-class SceneEmbree; // Forward declaration
-
-// Verifica si un punto está en sombra usando BVH
-bool estaEnSombraBVH(const Point& punto, const Direction& normal, const Light& luz, const SceneBVH& sceneBVH);
-
-// Calcula iluminación global con BVH
-Pixel calcularIluminacionGlobalBVH(
-    const Interseccion& inter,
-    const std::vector<Light>& luces,
-    const SceneBVH& sceneBVH,
-    const Direction& wo,
-    bool incluirIndirecta,
-    int depth,
-    int maxBounces
-);
-
-// Calcula rebote indirecto con BVH
-Pixel calcularReboteIndirectoBVH(
-    const Point& origen,
-    const Direction& normal,
-    const Material& material,
-    const Direction& wo,
-    const SceneBVH& sceneBVH,
-    const std::vector<Light>& lights,
-    int depth,
-    int maxBounces
-);
-
-#ifdef USE_EMBREE
-// Verifica si un punto está en sombra usando Embree
-bool estaEnSombraEmbree(const Point& punto, const Direction& normal, const Light& luz, const SceneEmbree& sceneEmbree);
-
-// Calcula iluminación global con Embree
-Pixel calcularIluminacionGlobalEmbree(
-    const Interseccion& inter,
-    const std::vector<Light>& luces,
-    const SceneEmbree& sceneEmbree,
-    const Direction& wo,
-    bool incluirIndirecta,
-    int depth,
-    int maxBounces
-);
-
-// Calcula rebote indirecto con Embree
-Pixel calcularReboteIndirectoEmbree(
-    const Point& origen,
-    const Direction& normal,
-    const Material& material,
-    const Direction& wo,
-    const SceneEmbree& sceneEmbree,
-    const std::vector<Light>& lights,
-    int depth,
-    int maxBounces
-);
-#endif

@@ -136,30 +136,10 @@ Direction Operations::randomHemisphereDirection(const Direction& normal) {
 }
 
 /**
- * Calcula el coeficiente de Fresnel para un dieléctrico no polarizado.
- * 
- * Esta función determina la fracción de luz que se refleja en la interfaz 
- * entre dos materiales dieléctricos (por ejemplo, aire y vidrio), usando 
- * la ley de Fresnel. Considera reflexión interna total y el ángulo de 
- * incidencia entrante o saliente.
- * 
- * @param cosThetaI Coseno del ángulo de incidencia respecto a la normal de la superficie.
- *                  Debe estar en el rango [-1, 1]. Si es negativo, indica que el rayo
- *                  entra desde dentro del material.
- * @param etaI Índice de refracción del medio de origen (de donde viene el rayo).
- * @param etaT Índice de refracción del medio de destino (hacia donde va el rayo).
- * 
- * @return float Coeficiente de reflexión Fresnel (R), en el rango [0,1].
- *               Representa la fracción de luz reflejada; la fracción transmitida 
- *               es 1 - R.
- * 
- * @note La función maneja:
- *       - Reflexión total interna (R = 1)
- *       - Intercambio de índices si el rayo sale del material
- *       - Promedio de componentes paralela y perpendicular para luz no polarizada
- * 
- * @warning Se espera que los índices de refracción sean positivos y no nulos.
- * 
+ * Calcula el coeficiente de Fresnel R para un dieléctrico no polarizado,
+ * a partir del coseno del ángulo incidente y los índices de refracción
+ * (η_i, η_t), usando la ley de Snell y el promedio de las componentes
+ * paralela y perpendicular de Fresnel, incluyendo reflexión total interna.
  */
 float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
     // Clamp cosThetaI al rango [-1, 1]
@@ -193,22 +173,4 @@ float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
 
     return 0.5f * (rParallel * rParallel + rPerp * rPerp);
 }
-
-Vector3 Operations::sampleUniformSphereDirection() {
-        // Generación de números aleatorios [0, 1]
-        float r1 = (float)rand() / (float)RAND_MAX;
-        float r2 = (float)rand() / (float)RAND_MAX;
-        
-        // Transformación esférica (Método de Muestreo de la Inversa de la CDF)
-        float theta = acosf(1.0f - 2.0f * r1); // acos(1 - 2*r1)
-        float phi = 2.0f * M_PI * r2;
-
-        // Conversión a coordenadas cartesianas
-        Vector3 dir(
-            sinf(theta) * cosf(phi),
-            sinf(theta) * sinf(phi),
-            cosf(theta)
-        );
-        return dir;
-    }
 

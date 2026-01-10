@@ -101,14 +101,6 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
     // Luz de área
     lightSample = luz.origen;
     
-    /*
-    if (luz.width > 0 && luz.height > 0) {
-        lightSample = luz.samplePointOnArea((float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
-    } else {
-        lightSample = luz.origen;
-    }
-    */
-    
     shadowDir = Operations::sub(lightSample, shadowOrigin);
     maxDist = Operations::mod(shadowDir);
     shadowDir = Operations::norm(shadowDir);
@@ -129,7 +121,7 @@ bool estaEnSombra(const Point& punto, const Direction& normal, const Light& luz,
 //---------------------------------------------------------
 
 //---------------- Calcula iluminación para las imagenes que no tienen rebote indirecto ----------------
-Pixel calcularIluminacion(
+/*Pixel calcularIluminacion(
     const Interseccion& inter,
     const std::vector<Light>& luces,
     const std::vector<Primitive*>& primitives
@@ -158,7 +150,7 @@ Pixel calcularIluminacion(
 
         // --- 3️⃣ Luz de área ---
         if (luz.width > 0 && luz.height > 0) {
-            /*
+            
             //COMENTARIO TEMPORAL
             // Promediamos varias muestras para reducir ruido
             int numSamples = 8;
@@ -177,7 +169,7 @@ Pixel calcularIluminacion(
             contrib.r /= numSamples;
             contrib.g /= numSamples;
             contrib.b /= numSamples;
-            */
+            
             
             //SIMPLIFICAMOS LO ANTERIOR
             Point origen = luz.origen;
@@ -199,7 +191,7 @@ Pixel calcularIluminacion(
 
     return colorFinal;
 
-}
+}*/
 
 // ---------------------------------------------------------
 // Muestreo de nueva dirección según material (Monte Carlo)

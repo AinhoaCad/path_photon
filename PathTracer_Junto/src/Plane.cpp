@@ -51,9 +51,6 @@ Light Plane::getAreaLight() const {
     return areaLight_;
 }
 
-
-
-
 // Setters de compatibilidad
 void Plane::setDistancia(float d) {
     d_ = d;
