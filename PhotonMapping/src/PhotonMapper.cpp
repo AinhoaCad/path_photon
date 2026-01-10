@@ -123,7 +123,7 @@ void PhotonMapper::emitPhotons(int nPhotons) {
     // Amplify per-photon flux to make indirect visible (tuning factor)
     std::cout << "Emitiendo " << nPhotons << std::endl;
 
-    // Calculo del flujo por foton (NOSOTROS LO HACEMOS COMO (TOTAL_POWER/N)*M) fisicamente solo seria TOTAL_POWER/N
+    // Calculo del flujo por foton (NOSOTROS LO HACEMOS COMO (TOTAL_POWER/N)*4*PI) 
     Color fluxPerPhoton(
         (totalScenePower.R / nPhotons) * 4 * M_PI,
         (totalScenePower.G / nPhotons) * 4 * M_PI,

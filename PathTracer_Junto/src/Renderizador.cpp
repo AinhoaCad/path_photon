@@ -326,6 +326,20 @@ void muestrearDireccionRebote(
 }
 
 // ---------------- Iluminación directa ----------------
+// Esta función implementa Next Event Estimation (NEE) para calcular la luz directa
+// de luces puntuales visibles desde un punto de intersección.
+//
+// Ecuación de la luz directa (adaptación de la ecuación de render):
+// L_o(x, ω_o) ≈ Σ_l V(x, c_l) · (I_l / ||c_l - x||^2) · f_r(x, ω_l, ω_o) · max(0, n · ω_l)
+//
+// Donde:
+// - L_o(x, ω_o) → Radiancia saliente desde x hacia la cámara (ω_o)
+// - Σ_l         → Suma sobre todas las luces puntuales visibles
+// - V(x, c_l)   → Visibilidad: 1 si la luz l es visible desde x, 0 si está bloqueada (sombras)
+// - I_l         → Intensidad de la luz puntual l
+// - ||c_l - x||^2 → Atenuación por distancia
+// - f_r(x, ω_l, ω_o) → BRDF en x, describe cómo la luz se refleja
+// - max(0, n · ω_l)  → Coseno del ángulo de incidencia, factor Lambertiano
 Pixel calcularIluminacionDirecta(
     const Point& origen,
     const Direction& normal,
@@ -336,53 +350,58 @@ Pixel calcularIluminacionDirecta(
 ) {
     Pixel color = {0,0,0};
 
-    // Si es espejo o dielectrico no hay iluminación directa
+    // ---------------- Paso 0: descartamos materiales delta ---------------
+    // Los materiales espejo o dieléctricos delta no contribuyen a iluminación directa
     bool esDeltaPuro = (material.isEspejoPuro() || material.isDielectric());
     if (esDeltaPuro) return color;
 
+    // ---------------- Paso 1: bucle sobre todas las luces puntuales ---------------
     bool existeLuzPuntual = hayLuzPuntual(lights);
     if (existeLuzPuntual){
         for (const auto& luz : lights) {
-            // Origen del rayo de sombra desplazado para evitar auto-intersección
+            // ---------------- Paso 1a: origen del rayo de sombra ----------------
+            // Desplazamos ligeramente el origen para evitar auto-intersección
+            // Este rayo servirá para calcular el término V(x, c_l)
             Point shadowOrigin = Operations::add(origen, Operations::mult(normal, 0.001f));
-            Point lightSample;
-            Direction toLight;
-            float dist;
-                
-            // Luz puntual
-            lightSample = luz.origen;
-            toLight = Operations::sub(lightSample, shadowOrigin);
-            dist = Operations::mod(toLight);
+            Point lightSample = luz.origen;
+
+            // ---------------- Paso 1b: dirección y distancia a la luz --------------
+            // ω_l = dirección normalizada desde x hacia la luz
+            Direction toLight = Operations::sub(lightSample, shadowOrigin);
+            float dist = Operations::mod(toLight);  // ||c_l - x||
             toLight = Operations::norm(toLight);
-            
-            // Verificar sombras
+
+            // ---------------- Paso 1c: cálculo de visibilidad V(x, c_l) ----------
+            // Lanzamos un rayo de sombra y comprobamos si algo bloquea la luz
             Ray shadowRay(shadowOrigin.toVector(), toLight.toVector());
             bool inShadow = false;
             for (auto& prim : primitives) {
                 float shadowT;
                 if (prim->intersect(shadowRay, shadowT) && shadowT > 0.001f && shadowT < dist) {
-                    inShadow = true;
+                    inShadow = true; // bloqueado → V = 0
                     break;
                 }
             }
 
+            // ---------------- Paso 2: si la luz es visible -----------------------
             if (!inShadow) {
-                // Contribución de luz (puntual)
+                // Calcular contribución de la luz: f_r · I_l / r^2 · cosθ
                 Pixel contrib = luz.calcularLuzBSDF(origen, normal, material, toLight, wo);
 
-                // multiplicar por kd para preservar el color del material
-                color.r += contrib.r * material.kd.R;
+                // Multiplicamos por el color del material kd 
+                color.r += contrib.r * material.kd.R;  
                 color.g += contrib.g * material.kd.G;
                 color.b += contrib.b * material.kd.B;
+
+                // I_l / ||c_l - x||^2 ya está incorporado en calcularLuzBSDF
+                // max(0, n·ω_l) también se aplica dentro de la función BSDF
             }
         }
     }
-    else{
-        color = {0,0,0};
-    }    
+
+    // ---------------- Paso 3: retorno de L_o(x, ω_o) ----------------------
     return color;
 }
-
 
 
 // ---------------- Rebote indirecto ----------------

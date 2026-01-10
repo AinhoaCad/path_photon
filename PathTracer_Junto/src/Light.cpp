@@ -58,27 +58,46 @@ Pixel Light::calcularLuz(Point p, Direction normal, Pixel color) const {
     };
 }
 
-Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material, const Direction& wi, const Direction& wo) const {
-    // Si el material es emisor, devuelve su emisión directamente
+// ---------------- Cálculo de la contribución de la luz puntual
+// Esta función corresponde a calcular el término:
+// L_o(x, ω_o) ≈ (I_l / ||c_l - x||^2) · f_r(x, ω_i, ω_o) · max(0, n · ω_i)
+//
+// Donde:
+// - L_o(x, ω_o) → Radiancia que llega al punto x desde la luz en dirección ω_i
+// - I_l         → Intensidad de la luz puntual
+// - f_r(x, ω_i, ω_o) → BRDF del material en x
+// - max(0, n · ω_i)  → Coseno del ángulo de incidencia (Lambert)
+Pixel Light::calcularLuzBSDF(
+    Point p, 
+    Direction normal, 
+    const Material& material, 
+    const Direction& wi,   // Dirección desde el punto hacia la luz (ω_i)
+    const Direction& wo    // Dirección hacia la cámara (ω_o)
+) const {
+    // ---------------- Paso 0: materiales emisores ----------------
+    // Si el material mismo emite luz, devolvemos su radiancia Le(x, ω_o)
     if (material.Le.R > 0 || material.Le.G > 0 || material.Le.B > 0) {
         return material.Le.toPixel();
     }
 
-    // Intensidad de la luz (inversa cuadrada)
+    // ---------------- Paso 1: intensidad de la luz I_l ----------------
+    // Este término incluye la atenuación por distancia (inversa cuadrada)
     Pixel intensidad = calcularIntensidadLuz(p);
 
-    // Coseno entre normal y dirección de luz
+    // ---------------- Paso 2: coseno de incidencia -------------------
+    // max(0, n · ω_i) → Lambert
     float coseno = LambertianCos(normal, p);
 
-    // ---- Componente difusa (Lambertiana) ----
+    // ---------------- Paso 3: BRDF difusa (Lambertiana) --------------
+    // f_r(x, ω_i, ω_o) = k_d / π
     Pixel brdf_difusa = {
         material.kd.R / float(M_PI),
         material.kd.G / float(M_PI),
         material.kd.B / float(M_PI)
     };
 
-    // ---- Componente especular perfecta ----
-    // Reflección perfecta ωr = reflect(-wi, n)
+    // ---------------- Paso 4: BRDF especular perfecta -----------------
+    // Reflexión especular delta: f_r = k_s * max(0, dot(ω_r, ω_o))
     Direction reflected = Operations::reflect(Operations::mult(wi, -1.0f), normal);
     float specFactor = std::max(0.0f, Operations::dot(reflected, wo));
     Pixel brdf_especular = {
@@ -87,38 +106,39 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
         material.ks.B * specFactor
     };
 
-    // ---- Componente transmisiva (refracción perfecta) ----
+    // ---------------- Paso 5: BRDF transmisiva (refracción) -----------
     Pixel brdf_transmisiva = {0, 0, 0};
     if (material.kt.R > 0 || material.kt.G > 0 || material.kt.B > 0) {
         Direction incident = Operations::mult(wi, -1.0f);
         float cosTheta = Operations::dot(incident, normal);
-        // Calculamos Fresnel según si entramos o salimos
+
+        // Fresnel para ajustar reflexión / transmisión
         float etaI = 1.0f, etaT = material.ior;
         float absCosTh = std::fabs(cosTheta);
-        
+
         if (cosTheta > 0.0f) {
             // saliendo del material
-            etaI = material.ior;
-            etaT = 1.0f;
+            etaI = material.ior; etaT = 1.0f;
         } else {
             // entrando al material
             absCosTh = -cosTheta;
-            etaI = 1.0f;
-            etaT = material.ior;
+            etaI = 1.0f; etaT = material.ior;
         }
+
         float R = Operations::fresnelDielectric(absCosTh, etaI, etaT);
         float T = 1.0f - R;
 
         Vector3 refracted;
-        
-        // refract maneja internamente el ajuste de normal y eta, pasamos valores base
         bool ok = Operations::refract(incident.toVector(), normal.toVector(), 1.0f, material.ior, refracted);
 
         if (ok && T > 0.0f) {
             float absCos = std::fabs(Operations::dot(refracted, normal));
             if (absCos < 1e-6f) absCos = 1e-6f;
+
+            // Corrección de radiancia por cambio de medio: (η_i / η_t)^2
             float etaRatio = (cosTheta > 0.0f) ? (material.ior / 1.0f) : (1.0f / material.ior);
-            float factor = (T / absCos) / (etaRatio * etaRatio); // etaCorr
+            float factor = (T / absCos) / (etaRatio * etaRatio);
+
             brdf_transmisiva = {
                 material.kt.R * factor,
                 material.kt.G * factor,
@@ -127,7 +147,9 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
         }
     }
 
-    // ---- Sumar las tres contribuciones ponderadas ----
+    // ---------------- Paso 6: combinación final ----------------------
+    // Multiplicamos por intensidad de la luz y coseno de incidencia
+    // L_o(x, ω_o) ≈ I_l · f_r(x, ω_i, ω_o) · max(0, n · ω_i)
     Pixel total;
     total.r = intensidad.r * coseno * (brdf_difusa.r + brdf_especular.r + brdf_transmisiva.r);
     total.g = intensidad.g * coseno * (brdf_difusa.g + brdf_especular.g + brdf_transmisiva.g);
@@ -135,6 +157,7 @@ Pixel Light::calcularLuzBSDF(Point p, Direction normal, const Material& material
 
     return total;
 }
+
 
 
 // ----------- Métodos de área rectangular -----------
