@@ -359,7 +359,7 @@ Pixel calcularIluminacionGlobalConFotones(
                 inter.punto, inter.normal, material, wo,
                 primitives, luces, photonMapper,
                 pm_radius, pm_nPhotons, kernelType,
-                depth, maxBounces
+                depth, maxBounces,usarPhotonMappingParaDirecta
             );
 
             colorTotal.r += indirecta.r;

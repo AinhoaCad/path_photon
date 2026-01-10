@@ -121,6 +121,12 @@ Direction Operations::randomHemisphereDirection(const Direction& normal) {
     return Operations::norm(world);
 }
 
+/**
+ * Calcula el coeficiente de Fresnel R para un dieléctrico no polarizado,
+ * a partir del coseno del ángulo incidente y los índices de refracción
+ * (η_i, η_t), usando la ley de Snell y el promedio de las componentes
+ * paralela y perpendicular de Fresnel, incluyendo reflexión total interna.
+ */
 float Operations::fresnelDielectric(float cosThetaI, float etaI, float etaT) {
     if (cosThetaI < -1.0f) cosThetaI = -1.0f;
     else if (cosThetaI > 1.0f) cosThetaI = 1.0f;
