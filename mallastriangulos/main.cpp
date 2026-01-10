@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
 
-    /*
+    
     
     auto startLinear = std::chrono::steady_clock::now();
 
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
 
-    */
+    
     
     
 
