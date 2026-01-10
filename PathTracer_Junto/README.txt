@@ -23,6 +23,8 @@ Una vez se genere el ejecutable, se encontrará en el subdirectorio bin del proy
 Comando de ejecución : .\bin\pathtracer <spp> <dim> <dim> <fichero_salida>  (el formato puede ser .ppm, .exr, .png o .pfm)
 Parámetros: <spp> samples per pixel, <dim> <dim> anchura y altura en píxeles.
 
+*La escena a renderizar se elige desde el main de entre las diponibles.
+
 
 NOTAS
 ------------------------------------
