@@ -60,13 +60,13 @@ Scene createCornellBoxConMallaOBJ(const std::string& objFilePath, bool smoothNor
     bool success = OBJLoader::loadOBJ(
         objFilePath,
         scene,
-        purpleDiffuse,                      // Material
+        mirrorSpecular,                      // Material
 
-        Vector3(8.0f, 8.0f, 8.0f),         // Escala CONEJO
-        Vector3(0.0f, -1.0f, 0.0f),        // Traslación
+        //Vector3(8.0f, 8.0f, 8.0f),         // Escala CONEJO
+        //Vector3(0.0f, -1.0f, 0.0f),        // Traslación
 
-        /*Vector3(0.2f, 0.2f, 0.2f),         // Escala TETERA
-        Vector3(0.0f, -0.5f, 0.0f),        // Traslación*/ 
+        Vector3(0.2f, 0.2f, 0.2f),         // Escala TETERA
+        Vector3(0.0f, -0.5f, 0.0f),        // Traslación 
 
         smoothNormals,                      // Flag de suavizado
         trianglePercentage                  // Porcentaje de triángulos a cargar
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 
     // Crea y ajusta la escena
     Scene CornellBoxConMalla = createCornellBoxConMalla(useSmoothNormals);
-    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("conejovn.obj", useSmoothNormals, trianglePercentage);
+    Scene CornellBoxConMallaOBJ = createCornellBoxConMallaOBJ("tetera.obj", useSmoothNormals, trianglePercentage);
     
 
     scene = CornellBoxConMallaOBJ; // Elegir la escena a renderizar aquí
@@ -181,6 +181,8 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // IMAGEN 5: Sexta imagen con luz, rebotes y modificaciones
     //------------------------------------------------------
+
+    /*
     
     auto startLinear = std::chrono::steady_clock::now();
 
@@ -202,7 +204,7 @@ int main(int argc, char** argv) {
     auto linearMs = std::chrono::duration_cast<std::chrono::milliseconds>(endLinear - startLinear).count();
     std::cout << "[T] Path tracing: " << linearMs / 1000.0 << " s\n";
 
-    
+    */
     
     
 
